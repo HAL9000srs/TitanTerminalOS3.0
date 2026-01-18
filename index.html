@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Titan Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+            },
+            colors: {
+              terminal: {
+                bg: '#0a0a0b',
+                panel: '#121214',
+                border: '#27272a',
+                accent: '#00dc82', // Matrix green
+                danger: '#ff3b30',
+                text: '#e4e4e7',
+                muted: '#a1a1aa'
+              }
+            },
+            animation: {
+              ticker: 'ticker 40s linear infinite',
+            },
+            keyframes: {
+              ticker: {
+                '0%': { transform: 'translateX(0)' },
+                '100%': { transform: 'translateX(-50%)' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #0a0a0b;
+        color: #e4e4e7;
+        margin: 0;
+        overflow-x: hidden;
+      }
+      /* Custom scrollbar for terminal feel */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0a0a0b; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #27272a; 
+        border-radius: 2px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #3f3f46; 
+      }
+
+      /* CRT Scanline Overlay */
+      .crt-overlay {
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0) 0px,
+          rgba(0, 0, 0, 0) 2px,
+          rgba(0, 0, 0, 0.15) 2px,
+          rgba(0, 0, 0, 0.15) 4px
+        );
+        background-size: 100% 4px;
+        pointer-events: none;
+      }
+
+      /* Vignette Overlay */
+      .vignette {
+        background: radial-gradient(
+          circle at center,
+          transparent 0%,
+          rgba(10, 10, 11, 0.4) 70%,
+          rgba(10, 10, 11, 0.95) 100%
+        );
+        pointer-events: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+export enum AssetType {
+  STOCK = 'STOCK',
+  CRYPTO = 'CRYPTO',
+  COMMODITY = 'COMMODITY',
+  CURRENCY = 'CURRENCY',
+  PRIVATE = 'PRIVATE_EQUITY',
+  REAL_ESTATE = 'REAL_ESTATE'
+}
+
+export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CNY';
+
+export interface Asset {
+  id: string;
+  symbol: string;
+  name: string;
+  type: AssetType;
+  quantity: number;
+  avgPrice: number;
+  currentPrice: number; // In a real app, this would be live
+  currency: string;
+  lastUpdated: string;
+  change24h: number; // Percentage
+}
+
+export interface PortfolioSummary {
+  totalValue: number;
+  totalCost: number;
+  totalGainLoss: number;
+  totalGainLossPercent: number;
+  allocation: { name: string; value: number }[];
+}
+
+export interface AIAnalysisResult {
+  riskScore: number;
+  summary: string;
+  recommendations: string[];
+  diversificationStatus: string;
+}
+
+export interface MarketUpdate {
+  symbol: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  timestamp: number;
+}
+
+export interface MarketIndex {
+  name: string;
+  symbol: string;
+  value: number;
+  change: number;
+  changeVal: number;
+}
+
+export const INITIAL_ASSETS: Asset[] = [
+  {
+    id: '1',
+    symbol: 'AAPL',
+    name: 'Apple Inc.',
+    type: AssetType.STOCK,
+    quantity: 150,
+    avgPrice: 145.20,
+    currentPrice: 178.35,
+    currency: 'USD',
+    lastUpdated: new Date().toISOString(),
+    change24h: 1.25
+  },
+  {
+    id: '2',
+    symbol: 'BTC',
+    name: 'Bitcoin',
+    type: AssetType.CRYPTO,
+    quantity: 0.45,
+    avgPrice: 42000,
+    currentPrice: 64230.50,
+    currency: 'USD',
+    lastUpdated: new Date().toISOString(),
+    change24h: -2.4
+  },
+  {
+    id: '3',
+    symbol: 'XAU',
+    name: 'Gold Ounce',
+    type: AssetType.COMMODITY,
+    quantity: 10,
+    avgPrice: 1800,
+    currentPrice: 2045.10,
+    currency: 'USD',
+    lastUpdated: new Date().toISOString(),
+    change24h: 0.8
+  },
+  {
+    id: '4',
+    symbol: 'TSLA',
+    name: 'Tesla Inc.',
+    type: AssetType.STOCK,
+    quantity: 50,
+    avgPrice: 210.00,
+    currentPrice: 198.50,
+    currency: 'USD',
+    lastUpdated: new Date().toISOString(),
+    change24h: -1.1
+  },
+  {
+    id: '5',
+    symbol: 'NVDA',
+    name: 'NVIDIA Corp',
+    type: AssetType.STOCK,
+    quantity: 25,
+    avgPrice: 450.00,
+    currentPrice: 850.25,
+    currency: 'USD',
+    lastUpdated: new Date().toISOString(),
+    change24h: 3.5
+  }
+];
