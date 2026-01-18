@@ -5,11 +5,13 @@ import { AssetManager } from './components/AssetManager';
 import { AIAnalyst } from './components/AIAnalyst';
 import { NewsFeed } from './components/NewsFeed';
 import { TerminalConfig } from './components/TerminalConfig';
+import { LoginScreen } from './components/LoginScreen';
 import { TerminalBackground } from './components/TerminalBackground';
 import { loadAssets, saveAssets, calculateSummary } from './services/storageService';
 import { marketStream } from './services/marketStreamService';
-import { Asset, INITIAL_ASSETS, CurrencyCode, MarketIndex } from './types';
-import { BarChart2, TrendingUp, TrendingDown, AlertCircle, Radio } from 'lucide-react';
+import { userService } from './services/userService';
+import { Asset, INITIAL_ASSETS, CurrencyCode, MarketIndex, UserProfile } from './types';
+import { BarChart2, TrendingUp, TrendingDown, Radio } from 'lucide-react';
 
 const TICKER_SYMBOLS = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'META', 'TSLA', 'NVDA', 'BTC', 'ETH'];
 
@@ -26,6 +28,7 @@ const INITIAL_TICKER_DATA: Record<string, { price: number, change: number }> = {
 };
 
 const App: React.FC = () => {
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,8 +48,13 @@ const App: React.FC = () => {
     { name: 'DAX', symbol: 'DAX', value: 17419.33, change: 0.14, changeVal: 24.89 },
   ]);
 
-  // Load assets on mount
+  // Check for existing session on mount
   useEffect(() => {
+    const session = userService.getSession();
+    if (session) {
+      setUser(session);
+    }
+
     const data = loadAssets();
     const loadedAssets = data.length > 0 ? data : INITIAL_ASSETS;
     setAssets(loadedAssets);
@@ -141,6 +149,19 @@ const App: React.FC = () => {
   };
 
   const summary = calculateSummary(assets);
+
+  const handleLogout = () => {
+    userService.logout();
+    setUser(null);
+  };
+
+  if (!user && !isLoading) {
+    return (
+      <TerminalBackground>
+        <LoginScreen onLogin={(u) => setUser(u)} />
+      </TerminalBackground>
+    );
+  }
 
   const renderContent = () => {
     switch (activeTab) {

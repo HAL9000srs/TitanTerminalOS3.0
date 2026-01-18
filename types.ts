@@ -115,3 +115,17 @@ export const INITIAL_ASSETS: Asset[] = [
     change24h: 3.5
   }
 ];
+
+export interface UserProfile {
+  id: string;        // Unique Operator ID
+  accessKey: string; // Password (hashed in a real app, plain for demo)
+  createdAt: string;
+  role: 'OPERATOR' | 'ADMIN';
+  lastLogin: string;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  message?: string;
+  user?: UserProfile;
+}
