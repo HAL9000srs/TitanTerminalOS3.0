@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -7,16 +8,31 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
       colors: {
         terminal: {
-          bg: '#000000',
-          text: '#00ff00', 
-          accent: '#00dc82',
-          muted: '#6b7280',
-          border: '#333333',
+          bg: '#0a0a0b',
+          panel: '#121214',
+          border: '#27272a',
+          accent: '#00dc82', // Matrix green
+          danger: '#ff3b30',
+          text: '#e4e4e7',
+          muted: '#a1a1aa'
+        }
+      },
+      animation: {
+        ticker: 'ticker 40s linear infinite',
+      },
+      keyframes: {
+        ticker: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
         }
       }
-    },
+    }
   },
   plugins: [],
 }

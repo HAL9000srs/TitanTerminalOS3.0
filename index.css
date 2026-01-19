@@ -1,3 +1,51 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #0a0a0b;
+    color: #e4e4e7;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom scrollbar for terminal feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0b; 
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a; 
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46; 
+}
+
+/* CRT Scanline Overlay */
+.crt-overlay {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+
+/* Vignette Overlay */
+.vignette {
+  background: radial-gradient(
+    circle at center,
+    transparent 0%,
+    rgba(10, 10, 11, 0.4) 70%,
+    rgba(10, 10, 11, 0.95) 100%
+  );
+  pointer-events: none;
+}
