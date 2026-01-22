@@ -2,14 +2,16 @@ import { CurrencyCode } from '../types';
 
 export const SUPPORTED_CURRENCIES: Record<CurrencyCode, { symbol: string; locale: string; rate: number; name: string }> = {
   USD: { symbol: '$', locale: 'en-US', rate: 1, name: 'US Dollar' },
-  EUR: { symbol: '€', locale: 'de-DE', rate: 0.92, name: 'Euro' },
-  GBP: { symbol: '£', locale: 'en-GB', rate: 0.79, name: 'British Pound' },
-  JPY: { symbol: '¥', locale: 'ja-JP', rate: 150.5, name: 'Japanese Yen' },
-  CNY: { symbol: '¥', locale: 'zh-CN', rate: 7.21, name: 'Chinese Yuan' },
+  EUR: { symbol: '€', locale: 'en-US', rate: 0.92, name: 'Euro' },
+  GBP: { symbol: '£', locale: 'en-US', rate: 0.79, name: 'British Pound' },
+  JPY: { symbol: '¥', locale: 'en-US', rate: 150.5, name: 'Japanese Yen' },
+  CNY: { symbol: '¥', locale: 'en-US', rate: 7.21, name: 'Chinese Yuan' },
 };
 
 export const convertValue = (amount: number, toCurrency: CurrencyCode): number => {
-  return amount * SUPPORTED_CURRENCIES[toCurrency].rate;
+  const rawValue = amount * SUPPORTED_CURRENCIES[toCurrency].rate;
+  // Fixes the number to 2 decimals strings, then turns it back into a Number
+  return Number(rawValue.toFixed(2));
 };
 
 export const formatValue = (amount: number, currency: CurrencyCode): string => {
@@ -17,7 +19,7 @@ export const formatValue = (amount: number, currency: CurrencyCode): string => {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currency,
-    minimumFractionDigits: 2, // Changed from 0 to 2 to force decimals
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 2, // Forces 2 decimals (e.g. $10 -> $10.00)
+    maximumFractionDigits: 2, // Limits to 2 decimals (e.g. $10.555 -> $10.56)
   }).format(amount);
 };

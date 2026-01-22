@@ -83,7 +83,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ summary, assets, currency,
           </div>
           <div className="mt-2 text-xs text-terminal-muted flex items-center gap-1">
             <span className="text-emerald-500 font-mono">
-              {assets.length > 0 ? '+2.4%' : '0.00%'}
+              {assets.length > 0 ? '+2.40%' : '0.00%'}
             </span>
             <span>vs last month</span>
           </div>

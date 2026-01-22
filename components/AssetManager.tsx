@@ -266,7 +266,7 @@ export const AssetManager: React.FC<AssetManagerProps> = ({ assets, onAddAsset, 
                     <td className="px-6 py-4 text-right font-mono text-terminal-text">{asset.quantity.toLocaleString()}</td>
                     
                     {/* Avg Price with Tooltip showing converted value */}
-                    <td className="px-6 py-4 text-right font-mono text-terminal-muted group/avg relative">
+                    <td className="px-6 py-4 text-right font-mono text-terminal-muted group/avg relative whitespace-nowrap">
                       <span 
                         title={formatValue(convertValue(asset.avgPrice, currency), currency)}
                         className="border-b border-dotted border-terminal-muted/50 cursor-help"
@@ -276,7 +276,7 @@ export const AssetManager: React.FC<AssetManagerProps> = ({ assets, onAddAsset, 
                     </td>
 
                     {/* Current Price with Tooltip showing converted value */}
-                    <td className="px-6 py-4 text-right font-mono text-white group/curr relative">
+                    <td className="px-6 py-4 text-right font-mono text-white group/curr relative whitespace-nowrap">
                       <div className="flex flex-col items-end">
                         <span 
                           title={formatValue(convertValue(asset.currentPrice, currency), currency)}
@@ -290,8 +290,8 @@ export const AssetManager: React.FC<AssetManagerProps> = ({ assets, onAddAsset, 
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-right font-mono font-medium text-white">{formatValue(convertValue(valueRaw, currency), currency)}</td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right font-mono font-medium text-white whitespace-nowrap">{formatValue(convertValue(valueRaw, currency), currency)}</td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
                        <div className={`font-mono text-xs ${pnlRaw >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                          {pnlRaw > 0 ? '+' : ''}{formatValue(convertValue(pnlRaw, currency), currency)}
                        </div>

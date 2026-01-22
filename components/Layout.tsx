@@ -25,8 +25,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         onTabChange(id);
         setMobileMenuOpen(false);
       }}
-      title={label}
-      className={`flex items-center w-full px-4 py-3 mb-1 rounded-r-lg transition-all duration-200 border-l-2 ${
+      className={`flex items-center w-full px-4 py-3 mb-1 rounded-r-lg transition-all duration-200 border-l-2 select-none touch-manipulation cursor-pointer active:scale-[0.98] ${
         activeTab === id
           ? 'bg-terminal-border/50 border-terminal-accent text-terminal-accent'
           : 'border-transparent text-terminal-muted hover:bg-terminal-border/30 hover:text-terminal-text'
@@ -72,8 +71,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         <div className="p-4 border-t border-terminal-border space-y-2">
           <button
             onClick={() => onTabChange('config')}
-            title="Terminal Config"
-            className={`flex items-center gap-3 px-4 py-3 text-sm w-full rounded transition-colors ${
+            className={`flex items-center gap-3 px-4 py-3 text-sm w-full rounded transition-colors select-none touch-manipulation cursor-pointer active:scale-[0.98] ${
               activeTab === 'config' 
                 ? 'text-terminal-accent bg-terminal-accent/10' 
                 : 'text-terminal-muted hover:text-terminal-text hover:bg-terminal-border/30'
@@ -85,8 +83,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
           
           <button
             onClick={onLogout}
-            title="Sign Out"
-            className="flex items-center gap-3 px-4 py-3 text-sm w-full rounded transition-colors text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            className="flex items-center gap-3 px-4 py-3 text-sm w-full rounded transition-colors text-red-400 hover:text-red-300 hover:bg-red-500/10 select-none touch-manipulation cursor-pointer active:scale-[0.98]"
           >
             <LogOut size={16} />
             <span>Terminate Session</span>
