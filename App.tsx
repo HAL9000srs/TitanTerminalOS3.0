@@ -8,8 +8,7 @@ import { TerminalConfig } from './components/TerminalConfig';
 import { LoginScreen } from './components/LoginScreen';
 import { TerminalBackground } from './components/TerminalBackground';
 import { loadAssets, saveAssets, calculateSummary } from './services/storageService';
-import { marketStream } from './services/marketStreamService';
-import { realtimeGateway } from './services/realtimeService';
+import { realtimeGateway } from './services/marketStreamService';
 import { userService } from './services/userService';
 import { Asset, INITIAL_ASSETS, CurrencyCode, MarketIndex, UserProfile } from './types';
 import { BarChart2, TrendingUp, TrendingDown, Radio } from 'lucide-react';
@@ -55,7 +54,7 @@ const App: React.FC = () => {
       setAssets(loadedAssets);
       
       // Register assets with stream service to initialize base prices
-      loadedAssets.forEach(a => marketStream.registerAsset(a.symbol, a.currentPrice));
+      loadedAssets.forEach(a => realtimeGateway.subscribeTicker(a.symbol));
       
       setIsLoading(false);
     };
@@ -130,8 +129,7 @@ const App: React.FC = () => {
        }
     });
 
-    // Keep marketStream for indices if they aren't covered by Finnhub basic plan or mapped yet
-    // marketStream.connect(); 
+    // marketStream for indices is now handled via realtimeGateway or separate logic 
 
     return () => {
       unsubscribe();
@@ -153,8 +151,6 @@ const App: React.FC = () => {
       lastUpdated: new Date().toISOString()
     };
     setAssets(prev => [...prev, asset]);
-    setAssets(prev => [...prev, asset]);
-    marketStream.registerAsset(asset.symbol, asset.currentPrice);
     realtimeGateway.subscribeTicker(asset.symbol);
   };
 
