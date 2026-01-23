@@ -9,6 +9,7 @@ import { LoginScreen } from './components/LoginScreen';
 import { TerminalBackground } from './components/TerminalBackground';
 import { loadAssets, saveAssets, calculateSummary } from './services/storageService';
 import { marketStream } from './services/marketStreamService';
+import { realtimeGateway } from './services/realtimeService';
 import { userService } from './services/userService';
 import { Asset, INITIAL_ASSETS, CurrencyCode, MarketIndex, UserProfile } from './types';
 import { BarChart2, TrendingUp, TrendingDown, Radio } from 'lucide-react';
@@ -76,56 +77,65 @@ const App: React.FC = () => {
 
   // Initialize WebSocket connection
   useEffect(() => {
-    marketStream.connect();
+    // Phase 3: Connect Realtime Gateway
+    realtimeGateway.connect();
+    
+    // Subscribe to all initial assets to ensure we get updates
+    assets.forEach(a => realtimeGateway.subscribeTicker(a.symbol));
+
     setWsConnected(true);
 
-    const unsubscribe = marketStream.subscribe((update) => {
-      // Check if update is for an owned asset
-      setAssets(currentAssets => 
-        currentAssets.map(asset => {
-          if (asset.symbol === update.symbol) {
-            return {
-              ...asset,
-              currentPrice: update.price,
-              change24h: update.changePercent,
-              lastUpdated: new Date(update.timestamp).toISOString()
-            };
-          }
-          return asset;
-        })
-      );
+    const unsubscribe = realtimeGateway.subscribe((data) => {
+       // Finnhub data format: { data: [{ p: price, s: symbol, t: timestamp, v: volume }], type: 'trade' }
+       if (data.type === 'trade') {
+          data.data.forEach((trade: any) => {
+             const update = {
+                symbol: trade.s,
+                price: trade.p,
+                timestamp: trade.t,
+                // Note: Finnhub trade stream doesn't give 24h change, so we preserve existing change
+             };
 
-      // Check if update is for a market index
-      setIndices(currentIndices => 
-        currentIndices.map(index => {
-          if (index.symbol === update.symbol) {
-            return {
-              ...index,
-              value: update.price,
-              change: update.changePercent,
-              changeVal: update.change
-            };
-          }
-          return index;
-        })
-      );
+             // Update Assets
+             setAssets(currentAssets => 
+               currentAssets.map(asset => {
+                 if (asset.symbol === update.symbol) {
+                   return {
+                     ...asset,
+                     currentPrice: update.price,
+                     lastUpdated: new Date().toISOString()
+                   };
+                 }
+                 return asset;
+               })
+             );
 
-      // Update ticker data if symbol is tracked in ticker
-      setTickerData(prev => {
-        if (TICKER_SYMBOLS.includes(update.symbol)) {
-          return {
-            ...prev,
-            [update.symbol]: { price: update.price, change: update.changePercent }
-          };
-        }
-        return prev;
-      });
+             // Update Indices (if we had real index symbols mapping)
+             // For now, indices remain on mock stream or need explicit mapping
+             
+             // Update Ticker
+             setTickerData(prev => {
+                if (TICKER_SYMBOLS.includes(update.symbol)) {
+                   return {
+                      ...prev,
+                      [update.symbol]: { 
+                         price: update.price, 
+                         change: prev[update.symbol]?.change || 0 // Preserve change
+                      }
+                   };
+                }
+                return prev;
+             });
+          });
+       }
     });
+
+    // Keep marketStream for indices if they aren't covered by Finnhub basic plan or mapped yet
+    // marketStream.connect(); 
 
     return () => {
       unsubscribe();
-      marketStream.disconnect();
-      setWsConnected(false);
+      // realtimeGateway.disconnect(); // Optional, depending on if we want to keep it alive
     };
   }, []);
 
@@ -143,7 +153,9 @@ const App: React.FC = () => {
       lastUpdated: new Date().toISOString()
     };
     setAssets(prev => [...prev, asset]);
+    setAssets(prev => [...prev, asset]);
     marketStream.registerAsset(asset.symbol, asset.currentPrice);
+    realtimeGateway.subscribeTicker(asset.symbol);
   };
 
   const handleDeleteAsset = (id: string) => {
