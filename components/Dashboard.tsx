@@ -1,6 +1,7 @@
-import React from 'react';
-import { Asset, PortfolioSummary, CurrencyCode } from '../types';
+import React, { useEffect, useState } from 'react';
+import { Asset, PortfolioSummary, CurrencyCode, PortfolioSnapshot } from '../types';
 import { convertValue, formatValue, SUPPORTED_CURRENCIES } from '../services/currencyService';
+import { getPortfolioHistory } from '../services/storageService';
 import { ResponsiveContainer, Tooltip as RechartsTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Activity, Globe, ChevronDown, AlertCircle } from 'lucide-react';
 
@@ -12,6 +13,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ summary, assets, currency, onCurrencyChange }) => {
+  const [historyData, setHistoryData] = useState<{name: string, value: number}[]>([]);
   
   const getConvertedSummary = () => {
     return {
@@ -27,18 +29,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ summary, assets, currency,
     ? assets.reduce((prev, current) => (prev.change24h > current.change24h) ? prev : current, assets[0])
     : null;
 
-  // Mock historical data (only show flat line if no assets)
-  const mockHistoryData = assets.length > 0 ? [
-    { name: 'Jan', value: convertValue(summary.totalValue * 0.85, currency) },
-    { name: 'Feb', value: convertValue(summary.totalValue * 0.88, currency) },
-    { name: 'Mar', value: convertValue(summary.totalValue * 0.86, currency) },
-    { name: 'Apr', value: convertValue(summary.totalValue * 0.92, currency) },
-    { name: 'May', value: convertValue(summary.totalValue * 0.95, currency) },
-    { name: 'Jun', value: convertValue(summary.totalValue, currency) },
-  ] : [
-    { name: 'Jan', value: 0 }, { name: 'Feb', value: 0 }, { name: 'Mar', value: 0 },
-    { name: 'Apr', value: 0 }, { name: 'May', value: 0 }, { name: 'Jun', value: 0 },
-  ];
+  // Fetch Historical Data from n8n-populated table
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (assets.length === 0) return;
+
+      const snapshots = await getPortfolioHistory(30);
+      
+      if (snapshots.length > 0) {
+        // Transform DB snapshots into Chart Data
+        const chartData = snapshots.map(snap => {
+          const date = new Date(snap.snapshot_date);
+          return {
+            name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            value: convertValue(snap.total_value, currency) // Convert historical value to selected currency
+          };
+        });
+        setHistoryData(chartData);
+      } else {
+        // Fallback: If n8n hasn't run yet, generate a single "today" point
+        setHistoryData([
+          { 
+            name: 'Today', 
+            value: convertValue(summary.totalValue, currency) 
+          }
+        ]);
+      }
+    };
+
+    fetchHistory();
+  }, [assets, currency, summary.totalValue]);
 
   return (
     <div className="space-y-6">
@@ -160,7 +180,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ summary, assets, currency,
           <div style={{ width: '100%', height: 300, position: 'relative' }}>
              {assets.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={mockHistoryData}>
+                  <LineChart data={historyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
                     <XAxis dataKey="name" stroke="#52525b" tick={{fill: '#71717a', fontSize: 12}} tickLine={false} axisLine={false} />
                     <YAxis stroke="#52525b" tick={{fill: '#71717a', fontSize: 12}} tickLine={false} axisLine={false} tickFormatter={(val) => `${SUPPORTED_CURRENCIES[currency].symbol}${val < 1000 ? val : (val/1000).toFixed(0) + 'k'}`} />
