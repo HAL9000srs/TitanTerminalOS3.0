@@ -31,6 +31,14 @@ export interface PortfolioSnapshot {
   snapshot_date: string;
 }
 
+// Fear & Greed Index from system_stats table
+export interface FearGreedIndex {
+  metric_key: string;
+  score: number;
+  label: string;
+  updated_at: string;
+}
+
 export interface PortfolioSummary {
   totalValue: number;
   totalCost: number;
