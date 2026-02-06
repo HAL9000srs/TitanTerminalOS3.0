@@ -5,7 +5,7 @@ import { AssetManager } from './components/AssetManager';
 import { AIAnalyst } from './components/AIAnalyst';
 import { NewsFeed } from './components/NewsFeed';
 import { TerminalConfig } from './components/TerminalConfig';
-import { LoginScreen } from './components/LoginScreen';
+// import { LoginScreen } from './components/LoginScreen';
 import { TerminalBackground } from './components/TerminalBackground';
 import { loadAssets, saveAssets, calculateSummary } from './services/storageService';
 import { realtimeGateway } from './services/marketStreamService';
@@ -25,6 +25,15 @@ const INITIAL_TICKER_DATA: Record<string, { price: number, change: number }> = {
   'NVDA': { price: 850.25, change: 3.5 },
   'BTC': { price: 64230.50, change: -2.4 },
   'ETH': { price: 3450.00, change: 1.5 }
+};
+
+const DEFAULT_OPERATOR: UserProfile = {
+  id: 'OPERATOR',
+  accessKey: 'titan-os-v3', 
+  createdAt: new Date().toISOString(),
+  role: 'OPERATOR',
+  lastLogin: new Date().toISOString(),
+  displayName: 'Commander'
 };
 
 const App: React.FC = () => {
@@ -47,6 +56,9 @@ const App: React.FC = () => {
       
       if (session) {
         setUser(session);
+      } else {
+        // Auto-login default operator
+        setUser(DEFAULT_OPERATOR);
       }
 
       const data = await loadAssets();
@@ -172,13 +184,13 @@ const App: React.FC = () => {
     setUser(null);
   };
 
-  if (!user && !isLoading) {
-    return (
-      <TerminalBackground>
-        <LoginScreen onLogin={(u) => setUser(u)} />
-      </TerminalBackground>
-    );
-  }
+  // if (!user && !isLoading) {
+  //   return (
+  //     <TerminalBackground>
+  //       <LoginScreen onLogin={(u) => setUser(u)} />
+  //     </TerminalBackground>
+  //   );
+  // }
 
   const handleUserUpdate = async (name: string): Promise<boolean> => {
     if (!user) return false;

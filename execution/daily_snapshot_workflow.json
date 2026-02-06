@@ -1,0 +1,165 @@
+{
+  "name": "Daily Portfolio Snapshot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 16 * * 1-5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.schedule",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "id": "schedule-trigger",
+      "name": "Market Close (4pm EST)"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "assets",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ],
+      "id": "get-assets",
+      "name": "Supabase: Get All Assets",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Supabase Connection",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Calculate total net worth per user\nconst snapshots = {};\n\nconst items = $input.all();\n\nfor (const item of items) {\n   const asset = item.json;\n   // Skip if invalid data\n   if (!asset.user_id || !asset.currentPrice || !asset.quantity) continue;\n\n   if (!snapshots[asset.user_id]) {\n       snapshots[asset.user_id] = {\n           user_id: asset.user_id,\n           total_value: 0,\n           currency: 'USD',\n           snapshot_date: new Date().toISOString()\n       };\n   }\n   \n   // Add value (Quantity * Price)\n   const val = parseFloat(asset.quantity) * parseFloat(asset.currentPrice);\n   snapshots[asset.user_id].total_value += val;\n}\n\nreturn Object.values(snapshots).map(s => ({json: s}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        300
+      ],
+      "id": "calc-totals",
+      "name": "Calculate User Totals"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "tableId": "daily_snapshots",
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "user_id",
+            "snapshot_date"
+          ],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "total_value",
+              "displayName": "total_value",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "currency",
+              "displayName": "currency",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "snapshot_date",
+              "displayName": "snapshot_date",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ],
+      "id": "save-snapshot",
+      "name": "Supabase: Save Snapshot",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Supabase Connection",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Market Close (4pm EST)": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Get All Assets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Get All Assets": {
+      "main": [
+        [
+          {
+            "node": "Calculate User Totals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate User Totals": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Save Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
