@@ -249,11 +249,18 @@ export const AssetManager: React.FC<AssetManagerProps> = ({ assets, onAddAsset, 
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded bg-terminal-border flex items-center justify-center text-xs font-bold text-terminal-muted">
-                          {asset.symbol.substring(0, 1)}
+                          {asset.image_url ? (
+                            <img src={asset.image_url} alt={asset.symbol} className="w-5 h-5 object-contain" />
+                          ) : (
+                            asset.symbol.substring(0, 1)
+                          )}
                         </div>
                         <div>
                           <div className="font-bold text-white font-mono">{asset.symbol}</div>
-                          <div className="text-xs text-terminal-muted">{asset.name}</div>
+                          <div className="text-xs text-terminal-muted flex items-center gap-2">
+                             {asset.name}
+                             {asset.sector && <span className="text-[9px] px-1.5 py-0.5 bg-terminal-border/50 rounded text-terminal-muted/80">{asset.sector}</span>}
+                          </div>
                         </div>
                       </div>
                     </td>

@@ -1,0 +1,172 @@
+{
+  "name": "Automated Asset Intelligence Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hours": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.schedule",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "id": "schedule-trigger",
+      "name": "Every Hour"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "assets",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "key": "image_url",
+              "condition": "isEmpty"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ],
+      "id": "get-missing-metadata",
+      "name": "Get Assets (Missing Info)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Supabase Connection",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [
+        650,
+        300
+      ],
+      "id": "split-batches",
+      "name": "Process One by One"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4o Mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Find intelligence for this financial asset:\nName: {{$json.name}}\nSymbol: {{$json.symbol}}\nType: {{$json.type}}\n\nReturn a JSON object with:\n1. \"image_url\": A direct URL to a high-quality logo (PNG/JPG) for this asset. Prefer Wikipedia, CoinGecko, or Clearbit logos. Must result in a valid image.\n2. \"sector\": The industrial sector (e.g. \"Technology\", \"DeFi\", \"Energy\").\n3. \"market_cap\": Estimated market cap in USD (number only).\n\nIf you can't find a logo, use a placeholder from ui-avatars.com."
+            }
+          ]
+        },
+        "jsonOutput": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAiChatModel",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ],
+      "id": "ai-enrichment",
+      "name": "AI Intelligence Agent",
+      "credentials": {
+        "openAiApi": {
+          "id": "OpenAI Connection",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+        "parameters": {
+            "jsCode": "const aiRaw = $input.item.json.response || $input.item.json.content || $input.item.json.output || '{}';\nlet data = { image_url: '', sector: 'Unknown', market_cap: 0 };\n\ntry {\n  const cleanJson = aiRaw.toString().replace(/```json/g, '').replace(/```/g, '').trim();\n  data = JSON.parse(cleanJson);\n} catch (e) {\n  console.log(\"JSON Parse Error\", e);\n}\n\nreturn {\n  id: $(\"Process One by One\").item.json.id,\n  image_url: data.image_url,\n  sector: data.sector,\n  market_cap: data.market_cap\n};"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+            1050, 300
+        ],
+        "id": "clean-ai-data",
+        "name": "Format Data"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "assets",
+        "updateKey": "id",
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": ["id"],
+          "schema": [
+            {"id": "id", "displayName": "id", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "image_url", "displayName": "image_url", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "sector", "displayName": "sector", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": false},
+            {"id": "market_cap", "displayName": "market_cap", "required": false, "defaultMatch": true, "display": true, "type": "number", "canBeUsedToMatch": false}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        300
+      ],
+      "id": "update-asset",
+      "name": "Supabase: Update Asset",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Supabase Connection",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every Hour": {
+        "main": [[{"node": "Get Assets (Missing Info)", "type": "main", "index": 0}]]
+    },
+    "Get Assets (Missing Info)": {
+        "main": [[{"node": "Process One by One", "type": "main", "index": 0}]]
+    },
+    "Process One by One": {
+        "main": [[{"node": "AI Intelligence Agent", "type": "main", "index": 0}]]
+    },
+    "AI Intelligence Agent": {
+        "main": [[{"node": "Format Data", "type": "main", "index": 0}]]
+    },
+    "Format Data": {
+        "main": [[{"node": "Supabase: Update Asset", "type": "main", "index": 0}]]
+    },
+    "Supabase: Update Asset": {
+      "main": [
+        [
+          {
+            "node": "Process One by One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,213 @@
+{
+  "name": "Strategic Market Intelligence (News) v3",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutes": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.schedule",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "id": "schedule-trigger",
+      "name": "Every 30 Minutes"
+    },
+    {
+      "parameters": {
+        "url": "https://feeds.feedburner.com/Coindesk"
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ],
+      "id": "rss-coindesk",
+      "name": "CoinDesk RSS"
+    },
+    {
+      "parameters": {
+        "url": "https://finance.yahoo.com/news/rssindex"
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        450,
+        500
+      ],
+      "id": "rss-yahoo",
+      "name": "Yahoo Finance RSS"
+    },
+    {
+        "parameters": {
+            "mode": "json",
+            "json": "={\n  \"title\": \"{{ $json.title }}\",\n  \"url\": \"{{ $json.link }}\",\n  \"source\": \"{{ $node[\"CoinDesk RSS\"].name || \"Macro Market\" }}\",\n  \"content\": \"{{ $json.contentSnippet || $json.description }}\"\n}"
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 2,
+        "position": [
+            650, 400
+        ],
+        "id": "normalize-data",
+        "name": "Normalize Data"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4o Mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Analyze this news headline and summary for market sentiment.\n\nHeadline: {{$json.title}}\nSummary: {{$json.content}}\n\nReturn ONLY a JSON object with two fields:\n1. \"score\": A number between 0 and 100 (0=Bearish, 50=Neutral, 100=Bullish)\n2. \"summary\": A 1-sentence concise summary.\n3. \"sentiment_label\": One of \"BULLISH\", \"BEARISH\", or \"NEUTRAL\""
+            }
+          ]
+        },
+        "jsonOutput": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAiChatModel",
+      "typeVersion": 1,
+      "position": [
+        850,
+        400
+      ],
+      "id": "ai-analysis",
+      "name": "AI Sentiment Analysis",
+      "credentials": {
+        "openAiApi": {
+          "id": "OpenAI Connection",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+        "parameters": {
+            "jsCode": "// Parse the AI output\nconst aiRaw = $input.item.json.response || $input.item.json.content || $input.item.json.output || '{}';\nlet sentiment = { score: 50, summary: \"No analysis\", sentiment_label: \"NEUTRAL\" };\n\ntry {\n  // Clean markdown\n  const cleanJson = aiRaw.toString().replace(/```json/g, '').replace(/```/g, '').trim();\n  sentiment = JSON.parse(cleanJson);\n} catch (e) {\n  console.log(\"JSON Parse Error\", e);\n}\n\n// ROBUST RETRIEVAL using Paired Items\n// This ensures we get the EXACT input item that generated this AI response\nconst pairedItem = $input.item.pairedItem;\nconst itemIndex = pairedItem.item;\nconst original = $(\"Normalize Data\").all()[itemIndex].json;\n\nreturn {\n  title: original.title,\n  url: original.url,\n  source: original.source,\n  sentiment_score: sentiment.score,\n  summary: sentiment.summary\n};"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+            1050, 400
+        ],
+        "id": "clean-json",
+        "name": "Clean & Merge Data"
+    },
+    {
+      "parameters": {
+        "tableId": "news_articles",
+        "mappingMode": "autoMapInputData",
+        "operation": "upsert",
+        "columns": {
+            "matchingColumns": ["url"],
+             "value": {},
+             "schema": [
+                {"id": "url", "displayName": "url", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": true},
+                {"id": "title", "displayName": "title", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": false},
+                 {"id": "source", "displayName": "source", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": false},
+                  {"id": "summary", "displayName": "summary", "required": false, "defaultMatch": true, "display": true, "type": "string", "canBeUsedToMatch": false},
+                   {"id": "sentiment_score", "displayName": "sentiment_score", "required": false, "defaultMatch": true, "display": true, "type": "number", "canBeUsedToMatch": false}
+             ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        400
+      ],
+      "id": "save-news",
+      "name": "Supabase: Save News",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Supabase Connection",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [
+        [
+          {
+            "node": "CoinDesk RSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Yahoo Finance RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CoinDesk RSS": {
+      "main": [
+        [
+          {
+            "node": "Normalize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+     "Yahoo Finance RSS": {
+      "main": [
+        [
+          {
+            "node": "Normalize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Data": {
+        "main": [
+            [
+                {
+                    "node": "AI Sentiment Analysis",
+                    "type": "main",
+                    "index": 0
+                }
+            ]
+        ]
+    },
+    "AI Sentiment Analysis": {
+      "main": [
+        [
+          {
+            "node": "Clean & Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean & Merge Data": {
+         "main": [
+            [
+                {
+                    "node": "Supabase: Save News",
+                    "type": "main",
+                    "index": 0
+                }
+            ]
+        ]
+    }
+  }
+}
