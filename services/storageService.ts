@@ -1,4 +1,4 @@
-import { Asset, INITIAL_ASSETS, PortfolioSnapshot } from '../types';
+import { Asset, INITIAL_ASSETS, PortfolioSnapshot, PortfolioInsight } from '../types';
 import { supabase } from './supabase';
 
 export const loadAssets = async (): Promise<Asset[]> => {
@@ -45,6 +45,31 @@ export const getPortfolioHistory = async (days: number = 30): Promise<PortfolioS
     return data || [];
   } catch (e) {
     console.error("Failed to load history", e);
+    return [];
+  }
+};
+
+// NEW: Fetch latest Titan Intelligence insight
+export const getPortfolioInsights = async (limit: number = 1): Promise<PortfolioInsight[]> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('portfolio_insights')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error loading insights:', error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (e) {
+    console.error("Failed to load insights", e);
     return [];
   }
 };

@@ -67,6 +67,18 @@ export interface AIAnalysisResult {
   diversificationStatus: string;
 }
 
+// NEW: Interface for Titan Intelligence insights from n8n workflow
+export interface PortfolioInsight {
+  id: string;
+  user_id: string;
+  created_at: string;
+  summary: string;
+  risk_score: number;
+  diversification_status: string;
+  recommendations: string[];
+  type: 'DAILY_BRIEF' | 'DEEP_DIVE' | 'NEWS_ALERT';
+}
+
 export interface MarketUpdate {
   symbol: string;
   price: number;

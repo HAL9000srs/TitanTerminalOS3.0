@@ -1,0 +1,201 @@
+{
+  "name": "Titan Intelligence Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 17 * * 1-5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.schedule",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "id": "schedule-trigger",
+      "name": "Daily 5pm EST Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "assets",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "id": "get-assets",
+      "name": "Supabase: Get All Assets",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Supabase Connection",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Group assets by user and calculate portfolio metrics\nconst userPortfolios = {};\n\nfor (const item of $input.all()) {\n  const asset = item.json;\n  if (!asset.user_id) continue;\n\n  if (!userPortfolios[asset.user_id]) {\n    userPortfolios[asset.user_id] = {\n      user_id: asset.user_id,\n      assets: [],\n      totalValue: 0,\n      totalCost: 0,\n      assetTypes: new Set()\n    };\n  }\n\n  const value = (asset.quantity || 0) * (asset.currentPrice || 0);\n  const cost = (asset.quantity || 0) * (asset.avgPrice || 0);\n  \n  userPortfolios[asset.user_id].assets.push(asset);\n  userPortfolios[asset.user_id].totalValue += value;\n  userPortfolios[asset.user_id].totalCost += cost;\n  userPortfolios[asset.user_id].assetTypes.add(asset.type);\n}\n\n// Transform for LLM prompt\nconst results = Object.values(userPortfolios).map(p => {\n  const pnl = p.totalValue - p.totalCost;\n  const pnlPercent = p.totalCost > 0 ? (pnl / p.totalCost * 100) : 0;\n  const diversificationScore = p.assetTypes.size;\n  \n  return {\n    json: {\n      user_id: p.user_id,\n      portfolioSummary: `Portfolio: $${p.totalValue.toFixed(2)} | PnL: ${pnlPercent.toFixed(2)}% | ${p.assets.length} assets across ${diversificationScore} categories`,\n      assets: p.assets.map(a => `${a.symbol}: ${a.quantity} @ $${a.currentPrice} (${a.change24h}% 24h)`).join('\\n'),\n      totalValue: p.totalValue,\n      diversificationCount: diversificationScore,\n      pnlPercent: pnlPercent\n    }\n  };\n});\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300],
+      "id": "prepare-data",
+      "name": "Prepare Portfolio Data"
+    },
+    {
+      "parameters": {
+        "modelId": "gemini-2.0-flash",
+        "promptType": "define",
+        "text": "={{ 'You are a professional financial analyst for a portfolio management system called Titan Terminal. Analyze the following portfolio and provide:\\n\\n1. RISK_SCORE: A number from 0-100 representing overall portfolio risk\\n2. DIVERSIFICATION_STATUS: One of [Poor, Moderate, Excellent, Over-Diversified]\\n3. SUMMARY: A 2-3 sentence executive summary\\n4. RECOMMENDATIONS: 3-5 specific actionable recommendations\\n\\nPortfolio Data:\\n' + $json.portfolioSummary + '\\n\\nAsset Details:\\n' + $json.assets + '\\n\\nRespond in strict JSON format:\\n{\"risk_score\": number, \"diversification_status\": string, \"summary\": string, \"recommendations\": [string]}' }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "id": "gemini-analysis",
+      "name": "Gemini: Analyze Portfolio",
+      "credentials": {
+        "geminiApi": {
+          "id": "Gemini API Key",
+          "name": "Gemini account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse Gemini response and format for DB\nconst input = $input.item.json;\nlet analysis;\n\ntry {\n  // Extract JSON from response text\n  const responseText = input.response?.content || input.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    analysis = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('No JSON found in response');\n  }\n} catch (e) {\n  // Fallback defaults if parsing fails\n  analysis = {\n    risk_score: 50,\n    diversification_status: 'Moderate',\n    summary: 'Unable to generate detailed analysis. Portfolio appears stable.',\n    recommendations: ['Review asset allocation', 'Consider diversification options']\n  };\n}\n\nreturn {\n  json: {\n    user_id: input.user_id || $('Prepare Portfolio Data').item.json.user_id,\n    summary: analysis.summary,\n    risk_score: Math.min(100, Math.max(0, parseInt(analysis.risk_score) || 50)),\n    diversification_status: analysis.diversification_status || 'Moderate',\n    recommendations: analysis.recommendations || [],\n    type: 'DAILY_BRIEF',\n    created_at: new Date().toISOString()\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300],
+      "id": "parse-response",
+      "name": "Parse AI Response"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "portfolio_insights",
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "id": "risk_score",
+              "displayName": "risk_score",
+              "required": false,
+              "type": "number"
+            },
+            {
+              "id": "diversification_status",
+              "displayName": "diversification_status",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "id": "recommendations",
+              "displayName": "recommendations",
+              "required": false,
+              "type": "array"
+            },
+            {
+              "id": "type",
+              "displayName": "type",
+              "required": false,
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1250, 300],
+      "id": "save-insight",
+      "name": "Supabase: Save Insight",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Supabase Connection",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 5pm EST Trigger": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Get All Assets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Get All Assets": {
+      "main": [
+        [
+          {
+            "node": "Prepare Portfolio Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Portfolio Data": {
+      "main": [
+        [
+          {
+            "node": "Gemini: Analyze Portfolio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: Analyze Portfolio": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Save Insight",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

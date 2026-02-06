@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
-import { Asset, AIAnalysisResult } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Asset, AIAnalysisResult, PortfolioInsight, AssetType } from '../types';
 import { analyzePortfolioWithGemini, researchMarketWithGemini, generateSpeechWithGemini } from '../services/geminiService';
 import { playAudioContent } from '../services/audioService';
-import { Sparkles, AlertTriangle, CheckCircle, ShieldCheck, RefreshCw, Volume2, Globe, ArrowRight, Target, TrendingUp, TrendingDown, Zap, PieChart, Clipboard, Check, Info, Clock, Layers, Loader2 } from 'lucide-react';
+import { getPortfolioInsights } from '../services/storageService';
+import { Sparkles, AlertTriangle, CheckCircle, ShieldCheck, RefreshCw, Volume2, Globe, ArrowRight, Target, TrendingUp, TrendingDown, Zap, PieChart as PieChartIcon, Clipboard, Check, Info, Clock, Layers, Loader2, BarChart3 } from 'lucide-react';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
 
 interface AIAnalystProps {
   assets: Asset[];
 }
 
 export const AIAnalyst: React.FC<AIAnalystProps> = ({ assets }) => {
-  const [activeTab, setActiveTab] = useState<'portfolio' | 'market'>('portfolio');
+  const [activeTab, setActiveTab] = useState<'portfolio' | 'charts' | 'market'>('portfolio');
   
   // Portfolio Analysis State
   const [loading, setLoading] = useState(false);
@@ -23,6 +25,46 @@ export const AIAnalyst: React.FC<AIAnalystProps> = ({ assets }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchResult, setSearchResult] = useState<{text: string, groundingChunks: any[]} | null>(null);
+
+  // Saved Insight State (from n8n)
+  const [savedInsight, setSavedInsight] = useState<PortfolioInsight | null>(null);
+
+  // Fetch saved insight on mount
+  useEffect(() => {
+    const fetchSavedInsight = async () => {
+      const insights = await getPortfolioInsights(1);
+      if (insights.length > 0) {
+        setSavedInsight(insights[0]);
+      }
+    };
+    fetchSavedInsight();
+  }, []);
+
+  // Chart Colors
+  const CHART_COLORS = ['#3b82f6', '#f97316', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
+
+  // Calculate allocation data for pie chart
+  const allocationData = useMemo(() => {
+    const typeMap = new Map<string, number>();
+    assets.forEach(asset => {
+      const value = asset.quantity * asset.currentPrice;
+      const current = typeMap.get(asset.type) || 0;
+      typeMap.set(asset.type, current + value);
+    });
+    return Array.from(typeMap.entries()).map(([name, value]) => ({ name, value }));
+  }, [assets]);
+
+  // Calculate asset performance data for bar chart
+  const performanceData = useMemo(() => {
+    return assets
+      .map(asset => ({
+        symbol: asset.symbol,
+        pnlPercent: asset.avgPrice > 0 ? ((asset.currentPrice - asset.avgPrice) / asset.avgPrice * 100) : 0,
+        change24h: asset.change24h
+      }))
+      .sort((a, b) => b.pnlPercent - a.pnlPercent)
+      .slice(0, 10); // Top 10
+  }, [assets]);
 
   const handleAnalyze = async () => {
     if (assets.length === 0) {
@@ -119,6 +161,12 @@ export const AIAnalyst: React.FC<AIAnalystProps> = ({ assets }) => {
             className={`px-4 py-2 text-sm font-medium rounded transition-colors ${activeTab === 'portfolio' ? 'bg-terminal-bg text-white shadow-sm' : 'text-terminal-muted hover:text-white'}`}
           >
             Portfolio
+          </button>
+          <button 
+             onClick={() => setActiveTab('charts')}
+             className={`px-4 py-2 text-sm font-medium rounded transition-colors ${activeTab === 'charts' ? 'bg-terminal-bg text-white shadow-sm' : 'text-terminal-muted hover:text-white'}`}
+          >
+            Charts
           </button>
           <button 
              onClick={() => setActiveTab('market')}
@@ -356,6 +404,119 @@ export const AIAnalyst: React.FC<AIAnalystProps> = ({ assets }) => {
             </div>
           )}
         </>
+      )}
+
+      {activeTab === 'charts' && (
+        <div className="animate-fade-in space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Allocation Pie Chart */}
+            <div className="bg-terminal-panel border border-terminal-border rounded-lg p-6">
+              <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                <PieChartIcon size={18} className="text-terminal-accent" />
+                Asset Allocation
+              </h3>
+              {allocationData.length > 0 ? (
+                <div style={{ width: '100%', height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={allocationData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={100}
+                        innerRadius={50}
+                        fill="#8884d8"
+                        dataKey="value"
+                        strokeWidth={2}
+                        stroke="#121214"
+                      >
+                        {allocationData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#fff' }}
+                        formatter={(value: number) => `$${value.toLocaleString()}`}
+                      />
+                      <Legend
+                        wrapperStyle={{ color: '#a1a1aa', fontSize: '12px' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-64 text-terminal-muted">
+                  <PieChartIcon size={48} className="opacity-30 mb-2" />
+                  <p className="text-sm">No assets to display</p>
+                </div>
+              )}
+            </div>
+
+            {/* Performance Bar Chart */}
+            <div className="bg-terminal-panel border border-terminal-border rounded-lg p-6">
+              <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                <BarChart3 size={18} className="text-purple-400" />
+                Asset Performance (PnL %)
+              </h3>
+              {performanceData.length > 0 ? (
+                <div style={{ width: '100%', height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={performanceData} layout="vertical">
+                      <XAxis type="number" stroke="#52525b" tick={{ fill: '#71717a', fontSize: 10 }} tickFormatter={(v) => `${v.toFixed(0)}%`} />
+                      <YAxis dataKey="symbol" type="category" stroke="#52525b" tick={{ fill: '#fff', fontSize: 11 }} width={60} />
+                      <RechartsTooltip
+                        contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', color: '#fff' }}
+                        formatter={(value: number) => `${value.toFixed(2)}%`}
+                      />
+                      <Bar dataKey="pnlPercent" radius={[0, 4, 4, 0]}>
+                        {performanceData.map((entry, index) => (
+                          <Cell key={`bar-${index}`} fill={entry.pnlPercent >= 0 ? '#10b981' : '#ef4444'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-64 text-terminal-muted">
+                  <BarChart3 size={48} className="opacity-30 mb-2" />
+                  <p className="text-sm">No performance data available</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Saved Insight from n8n */}
+          {savedInsight && (
+            <div className="bg-terminal-panel border border-terminal-border rounded-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-white flex items-center gap-2">
+                  <Sparkles size={18} className="text-amber-400" />
+                  Latest Intelligence Brief
+                </h3>
+                <span className="text-[10px] text-terminal-muted font-mono">
+                  {new Date(savedInsight.created_at).toLocaleString()}
+                </span>
+              </div>
+              <div className="bg-terminal-bg/50 p-4 rounded border border-terminal-border/50 mb-4">
+                <p className="text-terminal-text leading-relaxed">{savedInsight.summary}</p>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <div className={`px-3 py-1 rounded border ${
+                  savedInsight.risk_score > 75 ? 'border-rose-500/20 bg-rose-500/10 text-rose-500' :
+                  savedInsight.risk_score > 50 ? 'border-amber-500/20 bg-amber-500/10 text-amber-500' :
+                  'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
+                }`}>
+                  Risk Score: {savedInsight.risk_score}/100
+                </div>
+                <div className="px-3 py-1 rounded border border-terminal-border bg-terminal-bg text-terminal-muted">
+                  {savedInsight.diversification_status}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {activeTab === 'market' && (
