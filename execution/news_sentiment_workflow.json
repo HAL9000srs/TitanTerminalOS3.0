@@ -1,0 +1,189 @@
+{
+  "name": "Strategic Market Intelligence (News)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutes": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.schedule",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "id": "schedule-trigger",
+      "name": "Every 30 Minutes"
+    },
+    {
+      "parameters": {
+        "url": "https://feeds.feedburner.com/Coindesk"
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ],
+      "id": "rss-coindesk",
+      "name": "CoinDesk RSS"
+    },
+    {
+      "parameters": {
+        "url": "https://finance.yahoo.com/news/rssindex"
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        450,
+        500
+      ],
+      "id": "rss-yahoo",
+      "name": "Yahoo Finance RSS"
+    },
+    {
+        "parameters": {
+            "mode": "json",
+            "json": "={\n  \"title\": \"{{ $json.title }}\",\n  \"url\": \"{{ $json.link }}\",\n  \"source\": \"{{ $node[\"CoinDesk RSS\"].name || \"Macro Market\" }}\",\n  \"content\": \"{{ $json.contentSnippet || $json.description }}\"\n}"
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 2,
+        "position": [
+            650, 400
+        ],
+        "id": "normalize-data",
+        "name": "Normalize Data"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4o Mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Analyze this news headline and summary for market sentiment.\n\nHeadline: {{$json.title}}\nSummary: {{$json.content}}\n\nReturn ONLY a JSON object with two fields:\n1. \"score\": A number between 0 and 100 (0=Bearish, 50=Neutral, 100=Bullish)\n2. \"summary\": A 1-sentence concise summary.\n3. \"sentiment_label\": One of \"BULLISH\", \"BEARISH\", or \"NEUTRAL\""
+            }
+          ]
+        },
+        "jsonOutput": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAiChatModel",
+      "typeVersion": 1,
+      "position": [
+        850,
+        400
+      ],
+      "id": "ai-analysis",
+      "name": "AI Sentiment Analysis",
+      "credentials": {
+        "openAiApi": {
+          "id": "OpenAI Connection",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "news_articles",
+        "mappingMode": "defineBelow",
+        "value": {
+          "title": "={{ $node[\"Normalize Data\"].json.title }}",
+          "url": "={{ $node[\"Normalize Data\"].json.url }}",
+          "source": "={{ $node[\"Normalize Data\"].json.source }}",
+          "sentiment_score": "={{ $json.score }}",
+          "summary": "={{ $json.summary }}"
+        },
+        "operation": "upsert",
+        "columns": [
+            "url"
+        ]
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        400
+      ],
+      "id": "save-news",
+      "name": "Supabase: Save News",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Supabase Connection",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [
+        [
+          {
+            "node": "CoinDesk RSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Yahoo Finance RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CoinDesk RSS": {
+      "main": [
+        [
+          {
+            "node": "Normalize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+     "Yahoo Finance RSS": {
+      "main": [
+        [
+          {
+            "node": "Normalize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Data": {
+        "main": [
+            [
+                {
+                    "node": "AI Sentiment Analysis",
+                    "type": "main",
+                    "index": 0
+                }
+            ]
+        ]
+    },
+    "AI Sentiment Analysis": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Save News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

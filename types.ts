@@ -39,6 +39,16 @@ export interface FearGreedIndex {
   updated_at: string;
 }
 
+export interface NewsArticle {
+  id: number;
+  title: string;
+  url: string;
+  source: string;
+  sentiment_score: number;
+  summary: string;
+  created_at: string;
+}
+
 export interface PortfolioSummary {
   totalValue: number;
   totalCost: number;
