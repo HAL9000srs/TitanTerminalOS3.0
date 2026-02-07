@@ -48,31 +48,38 @@ const App: React.FC = () => {
   const [tickerData, setTickerData] = useState(INITIAL_TICKER_DATA);
 
   // Check for existing session on mount
+  // Check for existing session on mount
   useEffect(() => {
-    const initData = async () => {
-      // Verify existing session
-      // and restore user state
+    const initSession = async () => {
       const session = await userService.getSession();
-      
       if (session) {
         setUser(session);
       } else {
-        // Force login if no session
         setUser(null);
+        setIsLoading(false);
       }
-
-      const data = await loadAssets();
-      const loadedAssets = data.length > 0 ? data : INITIAL_ASSETS;
-      setAssets(loadedAssets);
-      
-      // Register assets with stream service to initialize base prices
-      loadedAssets.forEach(a => realtimeGateway.subscribeTicker(a.symbol));
-      
-      setIsLoading(false);
     };
-
-    initData();
+    initSession();
   }, []);
+
+  // Fetch assets whenever user changes
+  useEffect(() => {
+    const fetchUserAssets = async () => {
+      if (user) {
+        setIsLoading(true);
+        const data = await loadAssets();
+        setAssets(data);
+        
+        // Register assets with stream service
+        data.forEach(a => realtimeGateway.subscribeTicker(a.symbol));
+        
+        setIsLoading(false);
+      } else {
+        setAssets([]);
+      }
+    };
+    fetchUserAssets();
+  }, [user]);
 
   // Live Indices State
   const [indices, setIndices] = useState<MarketIndex[]>([

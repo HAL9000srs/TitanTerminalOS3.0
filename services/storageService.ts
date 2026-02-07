@@ -4,7 +4,7 @@ import { supabase } from './supabase';
 export const loadAssets = async (): Promise<Asset[]> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return INITIAL_ASSETS;
+    if (!user) return [];
 
     const { data, error } = await supabase
       .from('assets')
@@ -16,11 +16,11 @@ export const loadAssets = async (): Promise<Asset[]> => {
       return INITIAL_ASSETS;
     }
     
-    // If no assets in DB, return defaults
-    return data?.length ? data : INITIAL_ASSETS;
+    // Return data or empty array
+    return data || [];
   } catch (e) {
     console.error("Failed to load assets", e);
-    return INITIAL_ASSETS;
+    return [];
   }
 };
 
