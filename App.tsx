@@ -57,8 +57,8 @@ const App: React.FC = () => {
       if (session) {
         setUser(session);
       } else {
-        // Auto-login default operator
-        setUser(DEFAULT_OPERATOR);
+        // Force login if no session
+        setUser(null);
       }
 
       const data = await loadAssets();

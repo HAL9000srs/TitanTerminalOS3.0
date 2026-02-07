@@ -97,7 +97,7 @@ export interface MarketIndex {
 
 export const INITIAL_ASSETS: Asset[] = [
   {
-    id: '1',
+    id: '11111111-1111-4111-8111-111111111111',
     symbol: 'AAPL',
     name: 'Apple Inc.',
     type: AssetType.STOCK,
@@ -109,7 +109,7 @@ export const INITIAL_ASSETS: Asset[] = [
     change24h: 1.25
   },
   {
-    id: '2',
+    id: '22222222-2222-4222-8222-222222222222',
     symbol: 'BTC',
     name: 'Bitcoin',
     type: AssetType.CRYPTO,
@@ -121,7 +121,7 @@ export const INITIAL_ASSETS: Asset[] = [
     change24h: -2.4
   },
   {
-    id: '3',
+    id: '33333333-3333-4333-8333-333333333333',
     symbol: 'XAU',
     name: 'Gold Ounce',
     type: AssetType.COMMODITY,
@@ -133,7 +133,7 @@ export const INITIAL_ASSETS: Asset[] = [
     change24h: 0.8
   },
   {
-    id: '4',
+    id: '44444444-4444-4444-8444-444444444444',
     symbol: 'TSLA',
     name: 'Tesla Inc.',
     type: AssetType.STOCK,
@@ -145,7 +145,7 @@ export const INITIAL_ASSETS: Asset[] = [
     change24h: -1.1
   },
   {
-    id: '5',
+    id: '55555555-5555-4555-8555-555555555555',
     symbol: 'NVDA',
     name: 'NVIDIA Corp',
     type: AssetType.STOCK,
