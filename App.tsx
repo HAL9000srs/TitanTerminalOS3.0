@@ -5,7 +5,7 @@ import { AssetManager } from './components/AssetManager';
 import { AIAnalyst } from './components/AIAnalyst';
 import { NewsFeed } from './components/NewsFeed';
 import { TerminalConfig } from './components/TerminalConfig';
-// import { LoginScreen } from './components/LoginScreen';
+import { LoginScreen } from './components/LoginScreen';
 import { TerminalBackground } from './components/TerminalBackground';
 import { loadAssets, saveAssets, calculateSummary } from './services/storageService';
 import { realtimeGateway } from './services/marketStreamService';
@@ -184,13 +184,13 @@ const App: React.FC = () => {
     setUser(null);
   };
 
-  // if (!user && !isLoading) {
-  //   return (
-  //     <TerminalBackground>
-  //       <LoginScreen onLogin={(u) => setUser(u)} />
-  //     </TerminalBackground>
-  //   );
-  // }
+  if (!user && !isLoading) {
+    return (
+      <TerminalBackground>
+        <LoginScreen onLogin={(u) => setUser(u)} />
+      </TerminalBackground>
+    );
+  }
 
   const handleUserUpdate = async (name: string): Promise<boolean> => {
     if (!user) return false;

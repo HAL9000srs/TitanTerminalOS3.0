@@ -31,7 +31,7 @@
       "name": "Supabase: Get All Assets",
       "credentials": {
         "supabaseApi": {
-          "id": "Supabase Connection",
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
           "name": "Supabase account"
         }
       }
@@ -49,27 +49,31 @@
     },
     {
       "parameters": {
-        "modelId": "gemini-2.0-flash",
-        "promptType": "define",
-        "text": "={{ 'You are a professional financial analyst for a portfolio management system called Titan Terminal. Analyze the following portfolio and provide:\\n\\n1. RISK_SCORE: A number from 0-100 representing overall portfolio risk\\n2. DIVERSIFICATION_STATUS: One of [Poor, Moderate, Excellent, Over-Diversified]\\n3. SUMMARY: A 2-3 sentence executive summary\\n4. RECOMMENDATIONS: 3-5 specific actionable recommendations\\n\\nPortfolio Data:\\n' + $json.portfolioSummary + '\\n\\nAsset Details:\\n' + $json.assets + '\\n\\nRespond in strict JSON format:\\n{\"risk_score\": number, \"diversification_status\": string, \"summary\": string, \"recommendations\": [string]}' }}",
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: 'You are a professional financial analyst for Titan Terminal. Analyze this portfolio and respond ONLY with valid JSON (no markdown, no code blocks):\\n\\n' + $json.portfolioSummary + '\\n\\nAsset Details:\\n' + $json.assets + '\\n\\nRespond with this exact JSON structure:\\n{\"risk_score\": <number 0-100>, \"diversification_status\": \"<Poor|Moderate|Excellent|Over-Diversified>\", \"summary\": \"<2-3 sentence summary>\", \"recommendations\": [\"<action 1>\", \"<action 2>\", \"<action 3>\"]}' }] }] }) }}",
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [850, 300],
-      "id": "gemini-analysis",
-      "name": "Gemini: Analyze Portfolio",
+      "id": "gemini-http",
+      "name": "Gemini API Request",
       "credentials": {
-        "geminiApi": {
-          "id": "Gemini API Key",
-          "name": "Gemini account"
+        "httpQueryAuth": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Gemini API Key"
         }
       }
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Parse Gemini response and format for DB\nconst input = $input.item.json;\nlet analysis;\n\ntry {\n  // Extract JSON from response text\n  const responseText = input.response?.content || input.text || '';\n  const jsonMatch = responseText.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    analysis = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('No JSON found in response');\n  }\n} catch (e) {\n  // Fallback defaults if parsing fails\n  analysis = {\n    risk_score: 50,\n    diversification_status: 'Moderate',\n    summary: 'Unable to generate detailed analysis. Portfolio appears stable.',\n    recommendations: ['Review asset allocation', 'Consider diversification options']\n  };\n}\n\nreturn {\n  json: {\n    user_id: input.user_id || $('Prepare Portfolio Data').item.json.user_id,\n    summary: analysis.summary,\n    risk_score: Math.min(100, Math.max(0, parseInt(analysis.risk_score) || 50)),\n    diversification_status: analysis.diversification_status || 'Moderate',\n    recommendations: analysis.recommendations || [],\n    type: 'DAILY_BRIEF',\n    created_at: new Date().toISOString()\n  }\n};"
+        "jsCode": "// Parse Gemini HTTP response and format for DB\nconst input = $input.item.json;\nconst userId = $('Prepare Portfolio Data').item.json.user_id;\n\nlet analysis;\n\ntry {\n  // Extract text from Gemini response\n  const responseText = input.candidates?.[0]?.content?.parts?.[0]?.text || '';\n  \n  // Clean up response - remove markdown code blocks if present\n  let cleanJson = responseText.trim();\n  if (cleanJson.startsWith('```')) {\n    cleanJson = cleanJson.replace(/```json?\\n?/g, '').replace(/```/g, '').trim();\n  }\n  \n  analysis = JSON.parse(cleanJson);\n} catch (e) {\n  // Fallback defaults if parsing fails\n  console.log('Parse error:', e.message);\n  analysis = {\n    risk_score: 50,\n    diversification_status: 'Moderate',\n    summary: 'Unable to generate detailed analysis. Portfolio appears stable.',\n    recommendations: ['Review asset allocation', 'Consider diversification options']\n  };\n}\n\nreturn {\n  json: {\n    user_id: userId,\n    summary: analysis.summary || 'Analysis complete.',\n    risk_score: Math.min(100, Math.max(0, parseInt(analysis.risk_score) || 50)),\n    diversification_status: analysis.diversification_status || 'Moderate',\n    recommendations: analysis.recommendations || [],\n    type: 'DAILY_BRIEF'\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -131,7 +135,7 @@
       "name": "Supabase: Save Insight",
       "credentials": {
         "supabaseApi": {
-          "id": "Supabase Connection",
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
           "name": "Supabase account"
         }
       }
@@ -164,14 +168,14 @@
       "main": [
         [
           {
-            "node": "Gemini: Analyze Portfolio",
+            "node": "Gemini API Request",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Gemini: Analyze Portfolio": {
+    "Gemini API Request": {
       "main": [
         [
           {
