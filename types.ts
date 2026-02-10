@@ -34,13 +34,7 @@ export interface PortfolioSnapshot {
   snapshot_date: string;
 }
 
-// Fear & Greed Index from system_stats table
-export interface FearGreedIndex {
-  metric_key: string;
-  score: number;
-  label: string;
-  updated_at: string;
-}
+
 
 export interface NewsArticle {
   id: number;
@@ -48,6 +42,7 @@ export interface NewsArticle {
   url: string;
   source: string;
   sentiment_score: number;
+  sentiment_label?: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   summary: string;
   created_at: string;
 }

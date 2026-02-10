@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Asset, PortfolioSummary, CurrencyCode, PortfolioSnapshot, FearGreedIndex } from '../types';
+import { Asset, PortfolioSummary, CurrencyCode, PortfolioSnapshot } from '../types';
 import { convertValue, formatValue, SUPPORTED_CURRENCIES } from '../services/currencyService';
 import { getPortfolioHistory } from '../services/storageService';
-import { getFearGreedIndex, getFearGreedColor } from '../services/fearGreedService';
+
 import { ResponsiveContainer, Tooltip as RechartsTooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Activity, Globe, ChevronDown, AlertCircle, Gauge } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, Globe, ChevronDown, AlertCircle } from 'lucide-react';
 
 interface DashboardProps {
   summary: PortfolioSummary;
@@ -15,7 +15,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ summary, assets, currency, onCurrencyChange }) => {
   const [historyData, setHistoryData] = useState<{name: string, value: number}[]>([]);
-  const [fearGreed, setFearGreed] = useState<FearGreedIndex | null>(null);
+
   
   const getConvertedSummary = () => {
     return {
@@ -62,14 +62,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ summary, assets, currency,
     fetchHistory();
   }, [assets, currency, summary.totalValue]);
 
-  // Fetch Fear & Greed Index
-  useEffect(() => {
-    const fetchFearGreed = async () => {
-      const data = await getFearGreedIndex();
-      setFearGreed(data);
-    };
-    fetchFearGreed();
-  }, []);
+
 
   return (
     <div className="space-y-6">
@@ -158,34 +151,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ summary, assets, currency,
           </div>
         </div>
 
-        {/* Fear & Greed Index */}
-        <div className="bg-terminal-panel border border-terminal-border p-5 rounded-lg relative overflow-hidden group hover:border-terminal-accent/50 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Gauge size={48} />
-          </div>
-          <p className="text-terminal-muted text-xs font-mono uppercase tracking-widest mb-1">Fear & Greed</p>
-          <div 
-            className="text-2xl md:text-3xl font-mono font-medium"
-            style={{ color: fearGreed ? getFearGreedColor(fearGreed.score) : '#71717a' }}
-          >
-            {fearGreed ? `${fearGreed.score}/100` : '—'}
-          </div>
-          <div className="mt-2 text-xs text-terminal-muted flex items-center gap-1">
-            {fearGreed ? (
-              <>
-                <span 
-                  className="font-mono" 
-                  style={{ color: getFearGreedColor(fearGreed.score) }}
-                >
-                  {fearGreed.label}
-                </span>
-                <span>- Crypto Market</span>
-              </>
-            ) : (
-              <span className="text-terminal-muted">Awaiting data</span>
-            )}
-          </div>
-        </div>
+
       </div>
 
       {/* Charts Row */}

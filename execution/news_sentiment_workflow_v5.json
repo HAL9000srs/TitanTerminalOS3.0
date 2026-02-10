@@ -1,0 +1,245 @@
+{
+  "name": "Strategic Market Intelligence (News) v5.1",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutes": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.schedule",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "id": "schedule-trigger",
+      "name": "Every 30 Minutes"
+    },
+    {
+      "parameters": {
+        "url": "https://feeds.feedburner.com/Coindesk"
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ],
+      "id": "rss-coindesk",
+      "name": "CoinDesk RSS"
+    },
+    {
+      "parameters": {
+        "url": "https://finance.yahoo.com/news/rssindex"
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        450,
+        500
+      ],
+      "id": "rss-yahoo",
+      "name": "Yahoo Finance RSS"
+    },
+    {
+        "parameters": {
+            "mode": "json",
+            "json": "={\n  \"title\": \"{{ $json.title }}\",\n  \"url\": \"{{ $json.link }}\",\n  \"source\": \"{{ $node[\"CoinDesk RSS\"].name || \"Macro Market\" }}\",\n  \"content\": \"{{ $json.contentSnippet || $json.description }}\"\n}"
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 2,
+        "position": [
+            650, 400
+        ],
+        "id": "normalize-data",
+        "name": "Normalize Data"
+    },
+    {
+      "parameters": {
+        "prompt": "=Analyze this news headline and summary for market sentiment.\n\nHeadline: {{ $json.title }}\nLink: {{ $json.url }}\nSummary: {{ $json.content }}\n\nReturn ONLY a JSON object with three fields:\n1. \"score\": A number between 0 and 100 (0=Bearish, 50=Neutral, 100=Bullish)\n2. \"sentiment_label\": One of \"BULLISH\", \"BEARISH\", or \"NEUTRAL\"\n3. \"summary\": A 1-sentence concise summary."
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1,
+      "position": [
+        850,
+        400
+      ],
+      "id": "ai-chain",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "gpt-4o",
+        "temperature": 0
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAiChatModel",
+      "typeVersion": 1,
+      "position": [
+        850,
+        600
+      ],
+      "id": "openai-model",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "OpenAI Connection",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+        "parameters": {
+            "jsCode": "// Force run for ALL items to prevent drop-off\nreturn $input.all().map(item => {\n  const aiRaw = item.json.text || item.json.response || '{}';\n  let sentiment = { score: 50, summary: \"No analysis\", sentiment_label: \"NEUTRAL\" };\n\n  try {\n    const cleanJson = aiRaw.toString().replace(/```json/g, '').replace(/```/g, '').trim();\n    sentiment = JSON.parse(cleanJson);\n  } catch (e) {\n    // console.log(\"JSON Parse Error\", e);\n  }\n\n  return {\n    json: {\n      sentiment_score: sentiment.score,\n      sentiment_label: sentiment.sentiment_label,\n      summary: sentiment.summary\n    }\n  };\n});"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+            1050, 400
+        ],
+        "id": "clean-json",
+        "name": "Parse AI Json"
+    },
+    {
+        "parameters": {
+            "mode": "combine",
+            "combinationMode": "mergeByPosition"
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3,
+        "position": [
+            1250, 400
+        ],
+        "id": "merge-data",
+        "name": "Merge Original & AI"
+    },
+    {
+      "parameters": {
+        "tableId": "news_articles",
+        "mappingMode": "autoMapInputData",
+        "operation": "create",
+        "columns": {
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1450,
+        400
+      ],
+      "id": "save-news",
+      "name": "Supabase: Save News",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Supabase Connection",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [
+        [
+          {
+            "node": "CoinDesk RSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Yahoo Finance RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CoinDesk RSS": {
+      "main": [
+        [
+          {
+            "node": "Normalize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Yahoo Finance RSS": {
+      "main": [
+        [
+          {
+            "node": "Normalize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Data": {
+        "main": [
+            [
+                {
+                    "node": "Basic LLM Chain",
+                    "type": "main",
+                    "index": 0
+                },
+                {
+                    "node": "Merge Original & AI",
+                    "type": "main",
+                    "index": 1
+                }
+            ]
+        ]
+    },
+    "OpenAI Chat Model": {
+      "ai_language_model": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_language_model",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Json": {
+         "main": [
+            [
+                {
+                    "node": "Merge Original & AI",
+                    "type": "main",
+                    "index": 0
+                }
+            ]
+        ]
+    },
+    "Merge Original & AI": {
+        "main": [
+            [
+                {
+                    "node": "Supabase: Save News",
+                    "type": "main",
+                    "index": 0
+                }
+            ]
+        ]
+    }
+  }
+}
