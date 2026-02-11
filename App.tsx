@@ -5,7 +5,7 @@ import { AssetManager } from './components/AssetManager';
 import { AIAnalyst } from './components/AIAnalyst';
 import { NewsFeed } from './components/NewsFeed';
 import { TerminalConfig } from './components/TerminalConfig';
-import { LoginScreen } from './components/LoginScreen';
+
 import { TerminalBackground } from './components/TerminalBackground';
 import { loadAssets, saveAssets, calculateSummary } from './services/storageService';
 import { realtimeGateway } from './services/marketStreamService';
@@ -31,13 +31,13 @@ const DEFAULT_OPERATOR: UserProfile = {
   id: 'OPERATOR',
   accessKey: 'titan-os-v3', 
   createdAt: new Date().toISOString(),
-  role: 'OPERATOR',
+  role: 'ADMIN',
   lastLogin: new Date().toISOString(),
   displayName: 'Commander'
 };
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(DEFAULT_OPERATOR);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,9 +55,9 @@ const App: React.FC = () => {
       if (session) {
         setUser(session);
       } else {
-        setUser(null);
-        setIsLoading(false);
+        setUser(DEFAULT_OPERATOR);
       }
+      setIsLoading(false);
     };
     initSession();
   }, []);
@@ -188,16 +188,8 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     userService.logout();
-    setUser(null);
+    setUser(DEFAULT_OPERATOR);
   };
-
-  if (!user && !isLoading) {
-    return (
-      <TerminalBackground>
-        <LoginScreen onLogin={(u) => setUser(u)} />
-      </TerminalBackground>
-    );
-  }
 
   const handleUserUpdate = async (name: string): Promise<boolean> => {
     if (!user) return false;
