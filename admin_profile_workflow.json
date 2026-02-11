@@ -1,0 +1,375 @@
+{
+  "id": "admin-profile-bootstrap-v1",
+  "name": "Titan OS – Admin Profile Provisioner",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Bootstrap Admin (Run Once)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-user-id",
+              "name": "user_id",
+              "value": "42fa7119-e655-4d94-baa4-2abff7214de7",
+              "type": "string"
+            },
+            {
+              "id": "set-role",
+              "name": "role",
+              "value": "ADMIN",
+              "type": "string"
+            },
+            {
+              "id": "set-display-name",
+              "name": "display_name",
+              "value": "Commander",
+              "type": "string"
+            },
+            {
+              "id": "set-access-key",
+              "name": "access_key",
+              "value": "******",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Set Admin Profile Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "tableId": "profiles",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.user_id }}",
+            "role": "={{ $json.role }}",
+            "display_name": "={{ $json.display_name }}",
+            "access_key": "={{ $json.access_key }}"
+          },
+          "matchingColumns": ["id"],
+          "schema": [
+            { "id": "id", "displayName": "id", "required": false, "defaultMatch": true, "canBeUsedToMatch": true, "display": true, "type": "string" },
+            { "id": "role", "displayName": "role", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "display_name", "displayName": "display_name", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "access_key", "displayName": "access_key", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Supabase – Upsert Admin Profile",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [720, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "provision-operator",
+        "options": {
+          "responseMode": "responseNode"
+        }
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Webhook – Provision Operator",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 640],
+      "webhookId": "provision-operator-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-email",
+              "leftValue": "={{ $json.body.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            },
+            {
+              "id": "check-password",
+              "leftValue": "={{ $json.body.password }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            },
+            {
+              "id": "check-displayname",
+              "leftValue": "={{ $json.body.displayName }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Validate Fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 640]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://phdtlypivixdhexqpeos.supabase.co/auth/v1/admin/users",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"email\": \"{{ $json.body.email }}\",\n  \"password\": \"{{ $json.body.password }}\",\n  \"email_confirm\": true,\n  \"user_metadata\": {\n    \"display_name\": \"{{ $json.body.displayName }}\"\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "Create Auth User (Admin API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 560],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Supabase Service Role Header"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "extract-user-id",
+              "name": "new_user_id",
+              "value": "={{ $json.body.id }}",
+              "type": "string"
+            },
+            {
+              "id": "extract-email",
+              "name": "email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "extract-display-name",
+              "name": "display_name",
+              "value": "={{ $('Webhook – Provision Operator').item.json.body.displayName }}",
+              "type": "string"
+            },
+            {
+              "id": "extract-role",
+              "name": "role",
+              "value": "={{ $('Webhook – Provision Operator').item.json.body.role || 'OPERATOR' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0007-4000-8000-000000000007",
+      "name": "Extract New User Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [960, 560]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "profiles",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.new_user_id }}",
+            "role": "={{ $json.role }}",
+            "display_name": "={{ $json.display_name }}",
+            "access_key": "******"
+          },
+          "schema": [
+            { "id": "id", "displayName": "id", "required": false, "defaultMatch": true, "canBeUsedToMatch": true, "display": true, "type": "string" },
+            { "id": "role", "displayName": "role", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "display_name", "displayName": "display_name", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "access_key", "displayName": "access_key", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0008-4000-8000-000000000008",
+      "name": "Supabase – Insert Profile",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1200, 560],
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"OPERATOR PROVISIONED SUCCESSFULLY\",\n  \"user_id\": \"{{ $json.id }}\",\n  \"email\": \"{{ $('Extract New User Data').item.json.email }}\"\n}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0009-4000-8000-000000000009",
+      "name": "Respond – Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1440, 560]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"MISSING REQUIRED FIELDS: email, password, displayName\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "a1b2c3d4-0010-4000-8000-000000000010",
+      "name": "Respond – Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 780]
+    }
+  ],
+  "connections": {
+    "Bootstrap Admin (Run Once)": {
+      "main": [
+        [
+          {
+            "node": "Set Admin Profile Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Admin Profile Data": {
+      "main": [
+        [
+          {
+            "node": "Supabase – Upsert Admin Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook – Provision Operator": {
+      "main": [
+        [
+          {
+            "node": "Validate Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Fields": {
+      "main": [
+        [
+          {
+            "node": "Create Auth User (Admin API)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond – Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Auth User (Admin API)": {
+      "main": [
+        [
+          {
+            "node": "Extract New User Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract New User Data": {
+      "main": [
+        [
+          {
+            "node": "Supabase – Insert Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase – Insert Profile": {
+      "main": [
+        [
+          {
+            "node": "Respond – Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 2,
+  "active": false,
+  "pinData": {},
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "titan-terminal-os"
+  }
+}

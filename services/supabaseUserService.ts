@@ -4,8 +4,9 @@ import { UserProfile, AuthResponse } from '../types';
 export const supabaseUserService = {
   register: async (email: string, pass: string): Promise<AuthResponse> => {
     try {
+      const normalizedEmail = email.toLowerCase().trim();
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password: pass,
       });
 
@@ -32,8 +33,9 @@ export const supabaseUserService = {
 
   login: async (email: string, pass: string): Promise<AuthResponse> => {
     try {
+      const normalizedEmail = email.toLowerCase().trim();
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password: pass,
       });
 
