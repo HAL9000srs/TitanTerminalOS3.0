@@ -20,23 +20,34 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     ? user.displayName 
     : 'Malcolm S. Turnquest';
 
-  const NavItem = ({ id, icon: Icon, label }: { id: string; icon: any; label: string }) => (
-    <button
-      onClick={() => {
-        onTabChange(id);
-        setMobileMenuOpen(false);
-      }}
-      title={isCollapsed ? label : ''}
-      className={`flex items-center w-full ${isCollapsed ? 'justify-center px-2' : 'px-4'} py-3 mb-1 rounded-r-lg transition-all duration-200 border-l-2 select-none touch-manipulation cursor-pointer active:scale-[0.98] ${
-        activeTab === id
-          ? 'bg-terminal-border/50 border-terminal-accent text-terminal-accent'
-          : 'border-transparent text-terminal-muted hover:bg-terminal-border/30 hover:text-terminal-text'
-      }`}
-    >
-      <Icon size={18} className={isCollapsed ? "" : "mr-3"} />
-      {!isCollapsed && <span className="font-medium tracking-wide text-sm">{label}</span>}
-    </button>
-  );
+const NavItem = ({ 
+  id, 
+  icon: Icon, 
+  label, 
+  isCollapsed, 
+  isActive, 
+  onClick 
+}: { 
+  id: string; 
+  icon: any; 
+  label: string; 
+  isCollapsed: boolean; 
+  isActive: boolean; 
+  onClick: () => void; 
+}) => (
+  <button
+    onClick={onClick}
+    title={isCollapsed ? label : ''}
+    className={`flex items-center w-full ${isCollapsed ? 'justify-center px-2' : 'px-4'} py-3 mb-1 rounded-r-lg transition-all duration-200 border-l-2 select-none touch-manipulation cursor-pointer active:scale-[0.98] ${
+      isActive
+        ? 'bg-terminal-border/50 border-terminal-accent text-terminal-accent'
+        : 'border-transparent text-terminal-muted hover:bg-terminal-border/30 hover:text-terminal-text'
+    }`}
+  >
+    <Icon size={18} className={isCollapsed ? "" : "mr-3"} />
+    {!isCollapsed && <span className="font-medium tracking-wide text-sm">{label}</span>}
+  </button>
+);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -74,11 +85,46 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         </div>
 
         <nav className="flex-1 py-6 pr-0">
-          <NavItem id="dashboard" icon={LayoutDashboard} label="Command Center" />
-          <NavItem id="assets" icon={Wallet} label="Portfolio Manager" />
-          <NavItem id="analysis" icon={BrainCircuit} label="AI Intelligence" />
-          <NavItem id="news" icon={Newspaper} label="Market News" />
-          <NavItem id="markets" icon={LineChart} label="Global Markets" />
+          <NavItem 
+            id="dashboard" 
+            icon={LayoutDashboard} 
+            label="Command Center" 
+            isCollapsed={isCollapsed} 
+            isActive={activeTab === 'dashboard'} 
+            onClick={() => { onTabChange('dashboard'); setMobileMenuOpen(false); }} 
+          />
+          <NavItem 
+            id="assets" 
+            icon={Wallet} 
+            label="Portfolio Manager" 
+            isCollapsed={isCollapsed} 
+            isActive={activeTab === 'assets'} 
+            onClick={() => { onTabChange('assets'); setMobileMenuOpen(false); }} 
+          />
+          <NavItem 
+            id="analysis" 
+            icon={BrainCircuit} 
+            label="AI Intelligence" 
+            isCollapsed={isCollapsed} 
+            isActive={activeTab === 'analysis'} 
+            onClick={() => { onTabChange('analysis'); setMobileMenuOpen(false); }} 
+          />
+          <NavItem 
+            id="news" 
+            icon={Newspaper} 
+            label="Market News" 
+            isCollapsed={isCollapsed} 
+            isActive={activeTab === 'news'} 
+            onClick={() => { onTabChange('news'); setMobileMenuOpen(false); }} 
+          />
+          <NavItem 
+            id="markets" 
+            icon={LineChart} 
+            label="Global Markets" 
+            isCollapsed={isCollapsed} 
+            isActive={activeTab === 'markets'} 
+            onClick={() => { onTabChange('markets'); setMobileMenuOpen(false); }} 
+          />
         </nav>
 
         <div className="p-4 border-t border-terminal-border space-y-2">
@@ -131,12 +177,54 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
               </button>
             </div>
             <nav className="flex-1 flex flex-col gap-2">
-              <NavItem id="dashboard" icon={LayoutDashboard} label="Command Center" />
-              <NavItem id="assets" icon={Wallet} label="Portfolio Manager" />
-              <NavItem id="analysis" icon={BrainCircuit} label="AI Intelligence" />
-              <NavItem id="news" icon={Newspaper} label="Market News" />
-              <NavItem id="markets" icon={LineChart} label="Global Markets" />
-              <NavItem id="config" icon={Settings} label="Terminal Config" />
+              <NavItem 
+                id="dashboard" 
+                icon={LayoutDashboard} 
+                label="Command Center" 
+                isCollapsed={false}
+                isActive={activeTab === 'dashboard'}
+                onClick={() => { onTabChange('dashboard'); setMobileMenuOpen(false); }}
+              />
+              <NavItem 
+                id="assets" 
+                icon={Wallet} 
+                label="Portfolio Manager" 
+                isCollapsed={false}
+                isActive={activeTab === 'assets'}
+                onClick={() => { onTabChange('assets'); setMobileMenuOpen(false); }}
+              />
+              <NavItem 
+                id="analysis" 
+                icon={BrainCircuit} 
+                label="AI Intelligence" 
+                isCollapsed={false}
+                isActive={activeTab === 'analysis'}
+                onClick={() => { onTabChange('analysis'); setMobileMenuOpen(false); }}
+              />
+              <NavItem 
+                id="news" 
+                icon={Newspaper} 
+                label="Market News" 
+                isCollapsed={false}
+                isActive={activeTab === 'news'}
+                onClick={() => { onTabChange('news'); setMobileMenuOpen(false); }}
+              />
+              <NavItem 
+                id="markets" 
+                icon={LineChart} 
+                label="Global Markets" 
+                isCollapsed={false}
+                isActive={activeTab === 'markets'}
+                onClick={() => { onTabChange('markets'); setMobileMenuOpen(false); }}
+              />
+              <NavItem 
+                id="config" 
+                icon={Settings} 
+                label="Terminal Config" 
+                isCollapsed={false}
+                isActive={activeTab === 'config'}
+                onClick={() => { onTabChange('config'); setMobileMenuOpen(false); }}
+              />
             </nav>
             <div className="mt-auto border-t border-terminal-border pt-4">
                <button

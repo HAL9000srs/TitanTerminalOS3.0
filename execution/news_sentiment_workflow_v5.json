@@ -62,7 +62,7 @@
     },
     {
       "parameters": {
-        "prompt": "=Analyze this news headline and summary for market sentiment.\n\nHeadline: {{ $json.title }}\nLink: {{ $json.url }}\nSummary: {{ $json.content }}\n\nReturn ONLY a JSON object with three fields:\n1. \"score\": A number between 0 and 100 (0=Bearish, 50=Neutral, 100=Bullish)\n2. \"sentiment_label\": One of \"BULLISH\", \"BEARISH\", or \"NEUTRAL\"\n3. \"summary\": A 1-sentence concise summary."
+        "prompt": "=Analyze this news headline and summary for market sentiment.\n\nHeadline: {{ $json.title }}\nLink: {{ $json.url }}\nSummary: {{ $json.content }}\n\nReturn ONLY a JSON object with four fields:\n1. \"score\": A number between 0 and 100 (0=Bearish, 50=Neutral, 100=Bullish)\n2. \"sentiment_label\": One of \"BULLISH\", \"BEARISH\", or \"NEUTRAL\"\n3. \"summary\": A 1-sentence concise summary.\n4. \"url\": \"{{ $json.url }}\""
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1,
@@ -95,7 +95,7 @@
     },
     {
         "parameters": {
-            "jsCode": "// Force run for ALL items to prevent drop-off\nreturn $input.all().map(item => {\n  const aiRaw = item.json.text || item.json.response || '{}';\n  let sentiment = { score: 50, summary: \"No analysis\", sentiment_label: \"NEUTRAL\" };\n\n  try {\n    const cleanJson = aiRaw.toString().replace(/```json/g, '').replace(/```/g, '').trim();\n    sentiment = JSON.parse(cleanJson);\n  } catch (e) {\n    // console.log(\"JSON Parse Error\", e);\n  }\n\n  return {\n    json: {\n      sentiment_score: sentiment.score,\n      sentiment_label: sentiment.sentiment_label,\n      summary: sentiment.summary\n    }\n  };\n});"
+            "jsCode": "// Force run for ALL items to prevent drop-off\nreturn $input.all().map(item => {\n  const aiRaw = item.json.text || item.json.response || '{}';\n  let sentiment = { score: 50, summary: \"No analysis\", sentiment_label: \"NEUTRAL\", url: \"\" };\n\n  try {\n    const cleanJson = aiRaw.toString().replace(/```json/g, '').replace(/```/g, '').trim();\n    sentiment = JSON.parse(cleanJson);\n  } catch (e) {\n    // console.log(\"JSON Parse Error\", e);\n  }\n\n  return {\n    json: {\n      sentiment_score: sentiment.score,\n      sentiment_label: sentiment.sentiment_label,\n      summary: sentiment.summary,\n      url: sentiment.url\n    }\n  };\n});"
         },
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -108,7 +108,8 @@
     {
         "parameters": {
             "mode": "combine",
-            "combinationMode": "mergeByPosition"
+            "combinationMode": "mergeByKey",
+            "key": "url"
         },
         "type": "n8n-nodes-base.merge",
         "typeVersion": 3,
