@@ -6,9 +6,9 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: {
-        port: 3000,
+        port: 3002,
         host: '0.0.0.0',
-        allowedHosts: ['app.titanterminalos.cc', 'localhost', '127.0.0.1'],
+        allowedHosts: ['app.titanterminalos.cc', 'titanos4-3.titanterminalos.cc', 'localhost', '127.0.0.1'],
       },
       plugins: [react()],
       define: {

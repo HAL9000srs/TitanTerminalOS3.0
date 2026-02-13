@@ -79,17 +79,32 @@ export const saveAssets = async (assets: Asset[]): Promise<void> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Professional Bulk Upsert: Much faster than Firebase's batch loop
-    const { error } = await supabase
+    // 1. Delete assets that were removed from the UI (orphan cleanup)
+    const { data: existing } = await supabase
       .from('assets')
-      .upsert(
-        assets.map(asset => ({
-          ...asset,
-          user_id: user.id
-        }))
-      );
+      .select('id')
+      .eq('user_id', user.id);
 
-    if (error) console.error('Error saving assets:', error);
+    const currentIds = new Set(assets.map(a => a.id));
+    const orphanIds = (existing || []).filter(e => !currentIds.has(e.id)).map(e => e.id);
+
+    if (orphanIds.length > 0) {
+      await supabase.from('assets').delete().in('id', orphanIds);
+    }
+
+    // 2. Upsert current assets
+    if (assets.length > 0) {
+      const { error } = await supabase
+        .from('assets')
+        .upsert(
+          assets.map(asset => ({
+            ...asset,
+            user_id: user.id
+          }))
+        );
+
+      if (error) console.error('Error saving assets:', error);
+    }
   } catch (e) {
     console.error("Failed to save assets", e);
   }

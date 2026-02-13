@@ -5,11 +5,12 @@ import { AssetManager } from './components/AssetManager';
 import { AIAnalyst } from './components/AIAnalyst';
 import { NewsFeed } from './components/NewsFeed';
 import { TerminalConfig } from './components/TerminalConfig';
-
+import { LoginScreen } from './components/LoginScreen';
 import { TerminalBackground } from './components/TerminalBackground';
 import { loadAssets, saveAssets, calculateSummary } from './services/storageService';
 import { realtimeGateway } from './services/marketStreamService';
 import { userService } from './services/userService';
+import { supabase } from './services/supabase';
 import { Asset, INITIAL_ASSETS, CurrencyCode, MarketIndex, UserProfile } from './types';
 import { BarChart2, TrendingUp, TrendingDown, Radio } from 'lucide-react';
 
@@ -27,17 +28,8 @@ const INITIAL_TICKER_DATA: Record<string, { price: number, change: number }> = {
   'ETH': { price: 3450.00, change: 1.5 }
 };
 
-const DEFAULT_OPERATOR: UserProfile = {
-  id: 'OPERATOR',
-  accessKey: 'titan-os-v3', 
-  createdAt: new Date().toISOString(),
-  role: 'ADMIN',
-  lastLogin: new Date().toISOString(),
-  displayName: 'Commander'
-};
-
 const App: React.FC = () => {
-  const [user, setUser] = useState<UserProfile | null>(DEFAULT_OPERATOR);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,19 +39,27 @@ const App: React.FC = () => {
   // Ticker State
   const [tickerData, setTickerData] = useState(INITIAL_TICKER_DATA);
 
-  // Check for existing session on mount
-  // Check for existing session on mount
+  // Check for existing session on mount + listen for auth changes
   useEffect(() => {
-    const initSession = async () => {
-      const session = await userService.getSession();
-      if (session) {
-        setUser(session);
-      } else {
-        setUser(DEFAULT_OPERATOR);
-      }
+    // Restore session on load
+    userService.getSession().then(session => {
+      setUser(session);
       setIsLoading(false);
-    };
-    initSession();
+    }).catch(() => {
+      setIsLoading(false);
+    });
+
+    // Listen for auth state changes (login/logout/token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'SIGNED_IN') {
+        const session = await userService.getSession();
+        setUser(session);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Fetch assets whenever user changes
@@ -186,9 +186,9 @@ const App: React.FC = () => {
 
   const summary = calculateSummary(assets);
 
-  const handleLogout = () => {
-    userService.logout();
-    setUser(DEFAULT_OPERATOR);
+  const handleLogout = async () => {
+    await userService.logout();
+    setUser(null);
   };
 
   const handleUserUpdate = async (name: string): Promise<boolean> => {
@@ -304,6 +304,15 @@ const App: React.FC = () => {
   };
 
   if (isLoading) return null;
+
+  // Auth gate: show login screen if no authenticated user
+  if (!user) {
+    return (
+      <TerminalBackground>
+        <LoginScreen onLogin={setUser} />
+      </TerminalBackground>
+    );
+  }
 
   return (
     <TerminalBackground>

@@ -26,22 +26,27 @@ if (supabaseUrl && supabaseAnonKey) {
 // This prevents the "White Screen of Death" when env vars are missing
 const safeClient = client || new Proxy({} as SupabaseClient, {
     get: (target, prop) => {
-        // Return a mock object for 'auth' to prevent immediate crash on property access
         if (prop === 'auth') {
             return {
                 signUp: async () => ({ error: { message: 'Supabase Not Configured' } }),
                 signInWithPassword: async () => ({ error: { message: 'Supabase Not Configured' } }),
                 signOut: async () => ({ error: { message: 'Supabase Not Configured' } }),
-                getSession: async () => ({ data: { session: null }, error: { message: 'Supabase Not Configured' } }),
+                getSession: async () => ({ data: { session: null }, error: null }),
+                getUser: async () => ({ data: { user: null }, error: null }),
+                onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
             };
         }
         if (prop === 'from') {
              return () => ({
                  select: () => ({
                      eq: () => ({
-                         single: async () => ({ data: null, error: { message: 'Supabase Not Configured' } })
-                     })
-                 })
+                         single: async () => ({ data: null, error: { message: 'Supabase Not Configured' } }),
+                         data: null, error: null,
+                     }),
+                     data: null, error: null,
+                 }),
+                 upsert: async () => ({ error: { message: 'Supabase Not Configured' } }),
+                 delete: () => ({ in: async () => ({ error: { message: 'Supabase Not Configured' } }) }),
              })
         }
         console.error(`[SUPABASE ERROR] Attempted to access '${String(prop)}' on uninitialized client.`);
