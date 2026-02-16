@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, User, ChevronRight, Loader2, UserPlus, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, Lock, User, ChevronRight, Loader2, UserPlus, AlertTriangle, Eye, EyeOff, ArrowRightLeft } from 'lucide-react';
 import { userService } from '../services/userService';
 import { UserProfile } from '../types';
 
@@ -8,29 +8,33 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
-  const [isRegistering] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !password) return;
+    if (isRegistering && !displayName) {
+      setError('CALLSIGN REQUIRED FOR REGISTRATION');
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
 
     try {
       const response = isRegistering 
-        ? await userService.register(username, password)
+        ? await userService.register(username, password, displayName)
         : await userService.login(username, password);
 
       if (response.success && response.user) {
         onLogin(response.user);
       } else {
-        // CRITICAL: Force the use of response.message
         setError(response.message || "UNKNOWN REGISTRATION ERROR");
       }
     } catch (err) {
@@ -38,6 +42,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const toggleMode = () => {
+    setIsRegistering(!isRegistering);
+    setError(null);
   };
 
   return (
@@ -61,8 +70,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
            
            <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-bold text-white tracking-wide">
-                SECURE LOGIN
+                {isRegistering ? 'NEW OPERATOR REGISTRATION' : 'SECURE LOGIN'}
               </h2>
+              <button
+                type="button"
+                onClick={toggleMode}
+                className="text-xs font-mono text-terminal-muted hover:text-terminal-accent transition-colors underline underline-offset-4 decoration-dotted"
+              >
+                {isRegistering ? 'SWITCH TO LOGIN' : 'SWITCH TO REGISTER'}
+              </button>
            </div>
 
            {error && (
@@ -87,6 +103,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                     />
                  </div>
               </div>
+
+              {/* Display Name — Registration Only */}
+              {isRegistering && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                   <label className="text-xs font-mono text-blue-400 uppercase tracking-wider flex items-center gap-2">
+                      <UserPlus size={12} /> Operator Callsign
+                   </label>
+                   <div className="relative group">
+                      <input 
+                        type="text" 
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        className="w-full bg-black/40 border border-terminal-border rounded-lg px-4 py-3 text-white placeholder-terminal-muted/30 focus:outline-none focus:border-blue-500 transition-all font-mono"
+                        placeholder="Commander"
+                        autoComplete="name"
+                      />
+                   </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                  <label className="text-xs font-mono text-terminal-accent uppercase tracking-wider flex items-center gap-2">
@@ -114,17 +149,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
               <button 
                 type="submit" 
                 disabled={isLoading}
-                className="w-full font-bold py-3 rounded-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,0,0,0.2)] bg-terminal-accent/90 hover:bg-terminal-accent text-black"
+                className={`w-full font-bold py-3 rounded-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,0,0,0.2)] ${
+                  isRegistering 
+                    ? 'bg-blue-600/90 hover:bg-blue-600 text-white' 
+                    : 'bg-terminal-accent/90 hover:bg-terminal-accent text-black'
+                }`}
               >
                 {isLoading ? (
                    <>
                      <Loader2 size={18} className="animate-spin" />
-                     <span className="font-mono text-sm">VERIFYING...</span>
+                     <span className="font-mono text-sm">{isRegistering ? 'PROVISIONING...' : 'VERIFYING...'}</span>
                    </>
                 ) : (
                    <>
-                     <span className="font-mono text-sm">INITIALIZE SESSION</span>
-                     <ChevronRight size={18} />
+                     <span className="font-mono text-sm">{isRegistering ? 'INITIATE PROTOCOL' : 'INITIALIZE SESSION'}</span>
+                     {isRegistering ? <UserPlus size={18} /> : <ChevronRight size={18} />}
                    </>
                 )}
               </button>
@@ -133,7 +172,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
            <div className="mt-6 pt-6 border-t border-terminal-border/30 flex items-start gap-3">
               <ShieldCheck className="text-terminal-muted shrink-0" size={16} />
               <p className="text-[10px] text-terminal-muted leading-relaxed font-mono">
-                UNAUTHORIZED ACCESS IS PROHIBITED. ALL ACTIVITIES ARE LOGGED AND MONITORED.
+                {isRegistering 
+                  ? 'NEW ACCOUNTS ARE SUBJECT TO PROBATIONARY AUDITS. ENSURE CREDENTIALS ARE STORED SECURELY.'
+                  : 'UNAUTHORIZED ACCESS IS PROHIBITED. ALL ACTIVITIES ARE LOGGED AND MONITORED.'
+                }
               </p>
            </div>
         </div>

@@ -2,12 +2,15 @@ import { supabase } from './supabase';
 import { UserProfile, AuthResponse } from '../types';
 
 export const supabaseUserService = {
-  register: async (email: string, pass: string): Promise<AuthResponse> => {
+  register: async (email: string, pass: string, displayName?: string): Promise<AuthResponse> => {
     try {
       const normalizedEmail = email.toLowerCase().trim();
       const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
         password: pass,
+        options: {
+          data: { display_name: displayName || 'OPERATOR' }
+        }
       });
 
       if (error) throw error;
@@ -20,7 +23,7 @@ export const supabaseUserService = {
           role: 'OPERATOR', 
           createdAt: data.user?.created_at || new Date().toISOString(), 
           lastLogin: data.user?.last_sign_in_at || new Date().toISOString(),
-          displayName: 'OPERATOR' // Default for fresh registration
+          displayName: displayName || 'OPERATOR'
         } 
       };
     } catch (e: any) {
@@ -45,7 +48,7 @@ export const supabaseUserService = {
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', authData.user.id)
+        .eq('user_id', authData.user.id)
         .single();
 
       return { 
@@ -76,7 +79,7 @@ export const supabaseUserService = {
     const { data: profile } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', session.user.id)
+      .eq('user_id', session.user.id)
       .single();
 
     return {
@@ -94,7 +97,7 @@ export const supabaseUserService = {
       const { error } = await supabase
         .from('profiles')
         .update({ display_name: displayName })
-        .eq('id', userId);
+        .eq('user_id', userId);
 
       if (error) throw error;
       return true;
@@ -113,7 +116,7 @@ export const supabaseUserService = {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      return { success: true, message: 'OPERATOR PROVISIONED SUCESSFULLY' };
+      return { success: true, message: 'OPERATOR PROVISIONED SUCCESSFULLY' };
     } catch (e: any) {
       console.error('Provisioning Error:', e);
       return { success: false, message: e.message || 'PROVISIONING FAILED' };

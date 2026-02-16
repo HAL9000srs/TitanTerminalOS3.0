@@ -1,0 +1,655 @@
+{
+  "name": "Titan OS – Operator Data Manager",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "register-operator",
+        "options": {
+          "responseMode": "responseNode"
+        }
+      },
+      "id": "b1000001-0001-4000-8000-000000000001",
+      "name": "Webhook – Register Operator",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "register-operator-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-email",
+              "leftValue": "={{ $json.body.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            },
+            {
+              "id": "check-password",
+              "leftValue": "={{ $json.body.password }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            },
+            {
+              "id": "check-displayname",
+              "leftValue": "={{ $json.body.displayName }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1000001-0002-4000-8000-000000000002",
+      "name": "Validate Registration Fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://phdtlypivixdhexqpeos.supabase.co/auth/v1/admin/users",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"email\": \"{{ $json.body.email }}\",\n  \"password\": \"{{ $json.body.password }}\",\n  \"email_confirm\": true,\n  \"user_metadata\": {\n    \"display_name\": \"{{ $json.body.displayName }}\"\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "b1000001-0003-4000-8000-000000000003",
+      "name": "Create Auth User",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 220],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Supabase Service Role Header"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "extract-user-id",
+              "name": "user_id",
+              "value": "={{ $json.body.id }}",
+              "type": "string"
+            },
+            {
+              "id": "extract-email",
+              "name": "email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "extract-display-name",
+              "name": "display_name",
+              "value": "={{ $('Webhook – Register Operator').item.json.body.displayName }}",
+              "type": "string"
+            },
+            {
+              "id": "extract-role",
+              "name": "role",
+              "value": "={{ $('Webhook – Register Operator').item.json.body.role || 'OPERATOR' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1000001-0004-4000-8000-000000000004",
+      "name": "Extract User Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [960, 220]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "tableId": "profiles",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.user_id }}",
+            "role": "={{ $json.role }}",
+            "display_name": "={{ $json.display_name }}",
+            "access_key": "******"
+          },
+          "matchingColumns": ["user_id"],
+          "schema": [
+            { "id": "user_id", "displayName": "user_id", "required": true, "defaultMatch": true, "canBeUsedToMatch": true, "display": true, "type": "string" },
+            { "id": "role", "displayName": "role", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "display_name", "displayName": "display_name", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "access_key", "displayName": "access_key", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1000001-0005-4000-8000-000000000005",
+      "name": "Supabase – Upsert Profile",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1200, 220],
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "registrations",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $('Extract User Data').item.json.user_id }}",
+            "email": "={{ $('Extract User Data').item.json.email }}",
+            "display_name": "={{ $('Extract User Data').item.json.display_name }}",
+            "status": "COMPLETED"
+          },
+          "schema": [
+            { "id": "user_id", "displayName": "user_id", "required": true, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "email", "displayName": "email", "required": true, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "display_name", "displayName": "display_name", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "status", "displayName": "status", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1000001-0006-4000-8000-000000000006",
+      "name": "Supabase – Log Registration",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1440, 220],
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"OPERATOR PROVISIONED SUCCESSFULLY\",\n  \"user_id\": \"{{ $('Extract User Data').item.json.user_id }}\",\n  \"email\": \"{{ $('Extract User Data').item.json.email }}\",\n  \"display_name\": \"{{ $('Extract User Data').item.json.display_name }}\"\n}",
+        "options": {}
+      },
+      "id": "b1000001-0007-4000-8000-000000000007",
+      "name": "Respond – Registration Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1680, 220]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"VALIDATION FAILED: email, password, and displayName are required\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "b1000001-0008-4000-8000-000000000008",
+      "name": "Respond – Registration Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 440]
+    },
+
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "update-operator",
+        "options": {
+          "responseMode": "responseNode"
+        }
+      },
+      "id": "b1000001-0011-4000-8000-000000000011",
+      "name": "Webhook – Update Operator",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 680],
+      "webhookId": "update-operator-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-user-id",
+              "leftValue": "={{ $json.body.user_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1000001-0012-4000-8000-000000000012",
+      "name": "Validate Update Fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 680]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "profiles",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "display_name": "={{ $json.body.display_name }}",
+            "role": "={{ $json.body.role }}"
+          },
+          "schema": [
+            { "id": "display_name", "displayName": "display_name", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "role", "displayName": "role", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" }
+          ]
+        },
+        "matchType": "column",
+        "matchColumn": "user_id",
+        "matchValue": "={{ $json.body.user_id }}",
+        "options": {}
+      },
+      "id": "b1000001-0013-4000-8000-000000000013",
+      "name": "Supabase – Update Profile",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [720, 600],
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"OPERATOR PROFILE UPDATED\",\n  \"user_id\": \"{{ $json.body.user_id }}\"\n}",
+        "options": {}
+      },
+      "id": "b1000001-0014-4000-8000-000000000014",
+      "name": "Respond – Update Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"VALIDATION FAILED: user_id is required\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "b1000001-0015-4000-8000-000000000015",
+      "name": "Respond – Update Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 840]
+    },
+
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "deactivate-operator",
+        "options": {
+          "responseMode": "responseNode"
+        }
+      },
+      "id": "b1000001-0021-4000-8000-000000000021",
+      "name": "Webhook – Deactivate Operator",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 1060],
+      "webhookId": "deactivate-operator-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-target-id",
+              "leftValue": "={{ $json.body.target_user_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            },
+            {
+              "id": "check-admin-key",
+              "leftValue": "={{ $json.body.admin_key }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1000001-0022-4000-8000-000000000022",
+      "name": "Validate Deactivation Request",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 1060]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "profiles",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "role": "DEACTIVATED"
+          },
+          "schema": [
+            { "id": "role", "displayName": "role", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" }
+          ]
+        },
+        "matchType": "column",
+        "matchColumn": "user_id",
+        "matchValue": "={{ $json.body.target_user_id }}",
+        "options": {}
+      },
+      "id": "b1000001-0023-4000-8000-000000000023",
+      "name": "Supabase – Deactivate Profile",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [720, 980],
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "registrations",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.body.target_user_id }}",
+            "email": "deactivation-event",
+            "display_name": "DEACTIVATED",
+            "status": "FAILED"
+          },
+          "schema": [
+            { "id": "user_id", "displayName": "user_id", "required": true, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "email", "displayName": "email", "required": true, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "display_name", "displayName": "display_name", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" },
+            { "id": "status", "displayName": "status", "required": false, "defaultMatch": false, "canBeUsedToMatch": false, "display": true, "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1000001-0024-4000-8000-000000000024",
+      "name": "Supabase – Log Deactivation",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [960, 980],
+      "credentials": {
+        "supabaseApi": {
+          "id": "",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"OPERATOR DEACTIVATED\",\n  \"target_user_id\": \"{{ $json.body.target_user_id }}\"\n}",
+        "options": {}
+      },
+      "id": "b1000001-0025-4000-8000-000000000025",
+      "name": "Respond – Deactivation Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1200, 980]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"VALIDATION FAILED: target_user_id and admin_key are required\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "b1000001-0026-4000-8000-000000000026",
+      "name": "Respond – Deactivation Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 1200]
+    }
+  ],
+  "connections": {
+    "Webhook – Register Operator": {
+      "main": [
+        [
+          {
+            "node": "Validate Registration Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Registration Fields": {
+      "main": [
+        [
+          {
+            "node": "Create Auth User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond – Registration Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Auth User": {
+      "main": [
+        [
+          {
+            "node": "Extract User Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract User Data": {
+      "main": [
+        [
+          {
+            "node": "Supabase – Upsert Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase – Upsert Profile": {
+      "main": [
+        [
+          {
+            "node": "Supabase – Log Registration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase – Log Registration": {
+      "main": [
+        [
+          {
+            "node": "Respond – Registration Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+
+    "Webhook – Update Operator": {
+      "main": [
+        [
+          {
+            "node": "Validate Update Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Update Fields": {
+      "main": [
+        [
+          {
+            "node": "Supabase – Update Profile",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond – Update Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase – Update Profile": {
+      "main": [
+        [
+          {
+            "node": "Respond – Update Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+
+    "Webhook – Deactivate Operator": {
+      "main": [
+        [
+          {
+            "node": "Validate Deactivation Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Deactivation Request": {
+      "main": [
+        [
+          {
+            "node": "Supabase – Deactivate Profile",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond – Deactivation Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase – Deactivate Profile": {
+      "main": [
+        [
+          {
+            "node": "Supabase – Log Deactivation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase – Log Deactivation": {
+      "main": [
+        [
+          {
+            "node": "Respond – Deactivation Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 3,
+  "active": false,
+  "pinData": {},
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "titan-terminal-os"
+  }
+}

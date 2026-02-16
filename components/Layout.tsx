@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Wallet, LineChart, BrainCircuit, Settings, Menu, Newspaper, LogOut, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Wallet, BrainCircuit, Settings, Menu, Newspaper, LogOut, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface LayoutProps {
@@ -117,14 +117,7 @@ const NavItem = ({
             isActive={activeTab === 'news'} 
             onClick={() => { onTabChange('news'); setMobileMenuOpen(false); }} 
           />
-          <NavItem 
-            id="markets" 
-            icon={LineChart} 
-            label="Global Markets" 
-            isCollapsed={isCollapsed} 
-            isActive={activeTab === 'markets'} 
-            onClick={() => { onTabChange('markets'); setMobileMenuOpen(false); }} 
-          />
+
         </nav>
 
         <div className="p-4 border-t border-terminal-border space-y-2">
@@ -209,14 +202,7 @@ const NavItem = ({
                 isActive={activeTab === 'news'}
                 onClick={() => { onTabChange('news'); setMobileMenuOpen(false); }}
               />
-              <NavItem 
-                id="markets" 
-                icon={LineChart} 
-                label="Global Markets" 
-                isCollapsed={false}
-                isActive={activeTab === 'markets'}
-                onClick={() => { onTabChange('markets'); setMobileMenuOpen(false); }}
-              />
+
               <NavItem 
                 id="config" 
                 icon={Settings} 
